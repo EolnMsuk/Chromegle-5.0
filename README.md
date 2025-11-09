@@ -36,7 +36,7 @@
 
 Manual installation is fairly easy thanks to Chrome's great developer support:
 ```
-1. Download and unzip latest release github.com/EolnMsuk/Chromegle-4.0/releases
+1. Download and unzip latest release github.com/EolnMsuk/Chromegle-5.0/releases
 2. Open browser and navigate to chrome://extensions/ or edge://extensions/
 3. Enable "Developer Tools" on top-right of page
 4. Click "Load Unpacked" on chrome://extensions/
@@ -44,7 +44,7 @@ Manual installation is fairly easy thanks to Chrome's great developer support:
 6. Use on https://www.uhmegle.com/ freely
 ```
 
-<img width="797" height="1085" alt="chromegle" src="https://github.com/user-attachments/assets/581a5322-aa20-4ceb-ab9e-b36250d411a7" />
+<img width="817" height="608" alt="chromegle" src="https://github.com/user-attachments/assets/30cdd09c-6ba3-4d1d-b8f6-b88dbc6bcc90" />
 
 ## Authors
 
