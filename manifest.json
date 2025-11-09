@@ -16,7 +16,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["*://*.uhmegle.com/*"],
+      "matches": ["*://*.uhmegle.com/video*"],
       "js": ["src/core/face-bypass.js"],
       "run_at": "document_start",
       "world": "MAIN"
@@ -70,7 +70,7 @@
         "src/main.js"
       ],
       "matches": [
-        "*://*.uhmegle.com/*"
+        "*://*.uhmegle.com/video*"
       ]
     }
   ],
@@ -80,10 +80,6 @@
         "/manifest.json",
         "/public/themes/types/*",
         "/public/*",
-        "/src/ext/scrape-ips.js",
-        "/public/html/blocked.html",
-        "/public/html/voicecmds.html",
-        "/public/images/SettingsButton.png",
         "/src/ext/scrape-ips.js",
         "/public/html/blocked.html",
         "/public/html/voicecmds.html",
