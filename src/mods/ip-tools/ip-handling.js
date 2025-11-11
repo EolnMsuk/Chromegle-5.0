@@ -333,7 +333,7 @@ class IPGrabberManager extends Module {
 
     async onGeolocationRequestCompleted(unhashedAddress, geoJSON, hashedAddress, seenTimes, chatUUID) {
         if (ChatRegistry.getUUID() !== chatUUID) {
-             this.lastKnownHashedIP = null; this.lastKnownHashedIP = null; return;
+             this.lastKnownHashedIP = null; this.lastKnownUnhashedIP = null; return;
         }
         if (!this.ipGrabberDiv || !document.body.contains(this.ipGrabberDiv)) {
              Logger.WARNING("IP Grabber div no longer exists, aborting display.");
@@ -493,18 +493,7 @@ class IPGrabberManager extends Module {
 
             // --- START OF REORDERED BLOCK ---
             
-            // 5. Seen... times
-            if (!this.ipGrabberDiv.querySelector('.chromegle-seen-times')) {
-                Logger.DEBUG("Attempting to add field: seen-times");
-                const plural = (seenTimes > 1 || seenTimes === 0) ? "s" : "";
-                const seenBeforeDiv = document.createElement("div");
-                seenBeforeDiv.classList.add("logitem", "chromegle-ip-logitem", "chromegle-seen-times");
-                // --- FIX: Removed style='color: orange;' ---
-                seenBeforeDiv.innerHTML = `<span class='statuslog'>Seen ${seenTimes} time${plural}</span>`;
-                this.ipGrabberDiv.appendChild(seenBeforeDiv); Logger.DEBUG("Appended element for: seen-times");
-            }
-
-            // 6. Call
+            // 5. Call
             if (!this.ipGrabberDiv.querySelector('#call_time_data')) {
                 Logger.DEBUG("Attempting to add field: call_time_data");
                 let callTimeElement = this.createLogBoxMessage("call_time_data", "Call: ", "00:00");
@@ -513,6 +502,16 @@ class IPGrabberManager extends Module {
                         let timeSpan = document.querySelector("#call_time_data > span");
                         if (timeSpan) timeSpan.innerHTML = this.formatElapsedTime(date, startTime);
                     });
+            }
+
+            // 6. Seen... times
+            if (!this.ipGrabberDiv.querySelector('.chromegle-seen-times')) {
+                Logger.DEBUG("Attempting to add field: seen-times");
+                const plural = (seenTimes > 1 || seenTimes === 0) ? "s" : "";
+                const seenBeforeDiv = document.createElement("div");
+                seenBeforeDiv.classList.add("logitem", "chromegle-ip-logitem", "chromegle-seen-times");
+                seenBeforeDiv.innerHTML = `<span class='statuslog'>Seen ${seenTimes} time${plural}</span>`;
+                this.ipGrabberDiv.appendChild(seenBeforeDiv); Logger.DEBUG("Appended element for: seen-times");
             }
 
             // 7. Note
