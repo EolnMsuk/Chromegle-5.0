@@ -42,7 +42,7 @@ Manual installation is fairly easy thanks to Chrome's great developer support:
 4. Click "Load Unpacked" and double click the Chromegle-5.0-5.X and click OK
 ```
 
-<img width="1213" height="2181" alt="chromegle" src="https://github.com/user-attachments/assets/2bb8095a-f463-47da-abaa-bbeabc70f33b" />
+<img width="1170" height="2910" alt="chromegle" src="https://github.com/user-attachments/assets/2ad023f0-9c24-4845-81cc-524f024ca9b6" />
 
 ## Authors
 
