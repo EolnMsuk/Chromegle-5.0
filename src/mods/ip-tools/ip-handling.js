@@ -86,9 +86,6 @@ class IPGrabberManager extends Module {
         this.loadLanguageList();
         this.injectScrapeScript();
 
-        // --- REMOVED ---
-        // The 'chromegleReportDetected' event listener has been removed.
-        // --- END REMOVAL ---
     }
 
     injectScrapeScript() {
@@ -121,15 +118,21 @@ class IPGrabberManager extends Module {
              return;
         }
 
-        let unhashedAddress = event["detail"];
+        // Receive the object from scrape-ips.js
+        let unhashedAddress = event["detail"].ip;
+        let ipType = event["detail"].type;
+        
         this.lastKnownUnhashedIP = unhashedAddress;
 
         let data = this.pendingIpData[chatUUID] || {};
+        // Store both the IP and its type
         data.ip = unhashedAddress;
+        data.type = ipType; 
 
         if (data.status === "ui_ready") {
             Logger.DEBUG(`IP scraped for ${chatUUID}, UI is already ready. Processing.`);
-            this.processIpData(chatUUID, unhashedAddress);
+            // Pass the type to processIpData
+            this.processIpData(chatUUID, unhashedAddress, ipType);
             delete this.pendingIpData[chatUUID];
         } else {
             Logger.DEBUG(`IP scraped and stored for pending chat UUID: ${chatUUID}`);
@@ -146,7 +149,8 @@ class IPGrabberManager extends Module {
 
         if (data.status === "scraped") {
             Logger.DEBUG(`UI ready for ${chatUUID}, IP is already pending. Processing.`);
-            this.processIpData(chatUUID, data.ip);
+            // Pass the stored IP and type
+            this.processIpData(chatUUID, data.ip, data.type);
             delete this.pendingIpData[chatUUID];
         } else {
             Logger.DEBUG(`UI ready for ${chatUUID}, no pending IP. Waiting for scrape.`);
@@ -155,7 +159,8 @@ class IPGrabberManager extends Module {
         }
     }
 
-    async processIpData(chatUUID, unhashedAddress) {
+    // Add ipType as a new parameter
+    async processIpData(chatUUID, unhashedAddress, ipType) {
         // Removed storage query for toggle. Defaulting to showData = true.
         let showData = true;
         let hashedAddress = await sha1(unhashedAddress);
@@ -170,7 +175,8 @@ class IPGrabberManager extends Module {
             return;
         }
 
-        await this.geolocateAndDisplay(showData, unhashedAddress, hashedAddress, chatUUID);
+        // Pass ipType down to the next function
+        await this.geolocateAndDisplay(showData, unhashedAddress, hashedAddress, chatUUID, ipType);
     }
 
     onChatEnded(event) {
@@ -194,7 +200,8 @@ class IPGrabberManager extends Module {
         ));
     }
 
-    async geolocateAndDisplay(showData, unhashedAddress, hashedAddress, chatUUID) {
+    // Add ipType as a new parameter
+    async geolocateAndDisplay(showData, unhashedAddress, hashedAddress, chatUUID, ipType) {
         let previousQuery = {"PREVIOUS_HASHED_ADDRESS_LIST": {}};
         let result = await chrome.storage.local.get(previousQuery);
         const previouslyHashed = result["PREVIOUS_HASHED_ADDRESS_LIST"];
@@ -223,18 +230,14 @@ class IPGrabberManager extends Module {
         const countryName = fetchJson.country;
         const countryCode = countryNameToCode[countryName] || 'XX';
         fetchJson.country_code = countryCode;
-        await this.onGeolocationRequestCompleted(unhashedAddress, fetchJson, hashedAddress, seenTimes, chatUUID);
+
+        // Pass ipType down to the next function
+        await this.onGeolocationRequestCompleted(unhashedAddress, fetchJson, hashedAddress, seenTimes, chatUUID, ipType);
+        
         previouslyHashed[hashedAddress] = seenTimes + 1;
         await chrome.storage.local.set({"PREVIOUS_HASHED_ADDRESS_LIST": previouslyHashed});
     }
 
-    // --- REMOVED ---
-    // The entire 'handleReportEvent' function has been removed.
-    // --- END REMOVAL ---
-
-    // --- REMOVED ---
-    // The entire 'showPastReportNotification' function has been removed.
-    // --- END REMOVAL ---
 
     createAddressContainer(unhashedAddress, hashedAddress, previousHashedAddresses, showData, seenTimes) {
         const rightBox = document.querySelector(".rightBox.outlined");
@@ -281,15 +284,19 @@ class IPGrabberManager extends Module {
         }
     }
 
-    async insertUnhashedAddress(unhashedAddress, isOwner = false) {
+    // Add ipType as a new parameter
+    async insertUnhashedAddress(unhashedAddress, isOwner = false, ipType = 'srflx') {
         if (!this.ipGrabberDiv || !document.body.contains(this.ipGrabberDiv)) {
              Logger.WARNING("Cannot insert unhashed address, ipGrabberDiv is missing.");
              return;
         }
 
         let ipSpoiler = await (new IPAddressSpoiler(unhashedAddress)).setup();
+
+        // 1. Add "(relay)" text if the type is 'relay'
+        let relayText = (ipType === 'relay') ? " (relay)" : "";
         let ipMessage = this.createLogBoxMessage(
-            "address_data", "IP Address: ", ipSpoiler.get()
+            "address_data", "IP Address: ", ipSpoiler.get(), relayText
         );
 
         if (!ipMessage) {
@@ -297,7 +304,8 @@ class IPGrabberManager extends Module {
             return;
         }
 
-        if (!isOwner) {
+        // 2. Only show the block button if it's NOT a relay IP
+        if (!isOwner && ipType !== 'relay') {
             try {
                 if (typeof ButtonFactory?.ipBlockButton === 'function') {
                     const blockButtonElement = ButtonFactory.ipBlockButton(unhashedAddress);
@@ -331,7 +339,8 @@ class IPGrabberManager extends Module {
         Logger.DEBUG("Appended element for: geo-error");
     }
 
-    async onGeolocationRequestCompleted(unhashedAddress, geoJSON, hashedAddress, seenTimes, chatUUID) {
+    // Add ipType as a new parameter
+    async onGeolocationRequestCompleted(unhashedAddress, geoJSON, hashedAddress, seenTimes, chatUUID, ipType) {
         if (ChatRegistry.getUUID() !== chatUUID) {
              this.lastKnownHashedIP = null; this.lastKnownUnhashedIP = null; return;
         }
@@ -350,7 +359,8 @@ class IPGrabberManager extends Module {
         }
 
         if (!this.ipGrabberDiv.querySelector('#address_data')) {
-            await this.insertUnhashedAddress(geoJSON?.ip || unhashedAddress, geoJSON?.owner || false);
+            // Pass ipType to insertUnhashedAddress
+            await this.insertUnhashedAddress(geoJSON?.ip || unhashedAddress, geoJSON?.owner || false, ipType);
         }
 
         Logger.DEBUG("Geo completed for UUID <%s>. Payload: \n%s", chatUUID, JSON.stringify(geoJSON, null, 2));
@@ -370,7 +380,6 @@ class IPGrabberManager extends Module {
 
      // *** ADDED LOGGING HERE ***
      async skipBlockedCountries(countrySkipEnabled, geoJSON) {
-        // <<< NEW LOGGING START >>>
         Logger.DEBUG("Entering skipBlockedCountries function..."); // Log entry
 
         const code = geoJSON["country_code"] || geoJSON["country_code3"]; // Use 3-letter code as fallback if needed
@@ -384,26 +393,19 @@ class IPGrabberManager extends Module {
              Logger.DEBUG("Country Skip Check: No valid country code found in geoJSON. Exiting."); // Log reason for exit
              return false;
         }
-        // <<< NEW LOGGING END >>>
 
 
         // Get blocked countries list (existing code)
-        // *** THIS IS THE MODIFIED SECTION ***
         const defaultCountryList = "AE,AL,AM,BD,DZ,EG,GR,ID,IN,IQ,JO,KE,KW,LB,LK,LY,MA,MT,MY,NG,NP,PH,PK,SA,SC,TN,TR,QA,YE";
         const blockedCountriesString = typeof Settings?.retrieveChromeValue === 'function' ? await Settings.retrieveChromeValue("COUNTRY_SKIP_FIELD", defaultCountryList) : defaultCountryList;
-        // *** END OF MODIFIED SECTION ***
         const blockedCountries = blockedCountriesString.toUpperCase().split(',').map(c => c.trim()).filter(Boolean);
 
-        // <<< NEW LOGGING START >>>
         Logger.DEBUG(`Country Skip Check: Blocked list from settings = [${blockedCountries.join(', ')}]`); // Log the list being checked against
-        // <<< NEW LOGGING END >>>
 
 
         const countryBlocked = blockedCountries.includes(code.toUpperCase());
 
-        // <<< NEW LOGGING START >>>
         Logger.DEBUG(`Country Skip Check: Is country ${code} blocked? ${countryBlocked}`); // Log the result of the check
-        // <<< NEW LOGGING END >>>
 
         if (!countryBlocked) {
             return false; // Exit if not blocked
@@ -417,9 +419,7 @@ class IPGrabberManager extends Module {
              return false;
         }
 
-        // <<< NEW LOGGING START >>>
         Logger.INFO(`Country Skip Check: Triggering skip for blocked country ${code} in chat ${uuidToSkip}.`); // Log skip initiation
-        // <<< NEW LOGGING END >>>
 
         performDebouncedSkip(uuidToSkip); // Request the skip (handled by main.js)
         // Logger.INFO removed here as it duplicates the one above slightly
@@ -490,8 +490,6 @@ class IPGrabberManager extends Module {
                     Logger.DEBUG(`Appended element for: ${key}`);
                 }
             });
-
-            // --- START OF REORDERED BLOCK ---
             
             // 5. Call
             if (!this.ipGrabberDiv.querySelector('#call_time_data')) {
@@ -529,12 +527,9 @@ class IPGrabberManager extends Module {
                     noteSpan.style.color = "orange";
                     noteSpan.style.fontWeight = "bold";
                 }
-                // --- END OF FIX ---
 
                 this.ipGrabberDiv.appendChild(noteElement); Logger.DEBUG("Appended element for: profile_note_data");
             }
-            
-            // --- END OF REORDERED BLOCK ---
 
 
             if (geoJSON?.owner && !this.ipGrabberDiv.querySelector('.owner')) {
@@ -606,7 +601,6 @@ class IPGrabberManager extends Module {
          if (!this.ipGrabberDiv || !document.body.contains(this.ipGrabberDiv)) return;
         Logger.DEBUG("You found the owner of Chromegle!");
         
-        // --- FIX: Added alt="Developer Icon" to the img tag ---
         let ownerMessageDiv = $(
             `<div class="logitem chromegle-ip-logitem owner">
                  <img class='owner-gif' alt="Developer Icon" src="${ConstantValues.apiURL}users/owner/gif" style="max-width: 50px; vertical-align: middle; margin-right: 5px;" />
@@ -615,7 +609,6 @@ class IPGrabberManager extends Module {
                  </span>
              </div>`
         ).get(0);
-        // --- END FIX ---
 
         this.ipGrabberDiv.appendChild(ownerMessageDiv);
     }
