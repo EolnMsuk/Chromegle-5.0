@@ -9,6 +9,7 @@
 ## Tested Features
 - **Country Blocker - *New***
 - **Report Detection - *New***
+- **Relay Detection - *New***
 - **Face Bypass - *New***
 - **IP Blocker (FIX) - *NEW***
 - **IP Note (FIX) - *New***
