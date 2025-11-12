@@ -174,11 +174,11 @@ function skipIfPossible() {
     Logger.DEBUG("Dispatching first Esc key press...");
     document.dispatchEvent(event);
 
-    // Wait X seconds before dispatching the second esc for skipping
+    // Wait before dispatching the second esc for skipping
     setTimeout(() => {
         Logger.DEBUG("Dispatching second Esc key press after set delay...");
         document.dispatchEvent(event);
-    }, 1.2);
+    }, 1200);
 }
 // --- END OF FIX ---
 
