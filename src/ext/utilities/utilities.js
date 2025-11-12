@@ -178,7 +178,7 @@ function skipIfPossible() {
     setTimeout(() => {
         Logger.DEBUG("Dispatching second Esc key press after set delay...");
         document.dispatchEvent(event);
-    }, 0);
+    }, 1.2);
 }
 // --- END OF FIX ---
 
