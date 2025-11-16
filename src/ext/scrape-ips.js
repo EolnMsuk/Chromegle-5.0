@@ -5,7 +5,10 @@ document.addEventListener('scrapeAddress', () => {
     // Override the RTC peer connection creation to scrape our data
     window.RTCPeerConnection = function (...args) {
 
-        let hasSentSrflx = false;
+        // --- START OF FIX: New two-flag logic ---
+        let hasSentSrflx = false; // Have we sent the *real* IP?
+        let hasSentAny = false;   // Have we sent *any* IP (including relay)?
+        // --- END OF FIX ---
 
         const conn = new window.oRTCPeerConnection(...args)
         conn.oaddIceCandidate = conn.addIceCandidate;
@@ -18,21 +21,27 @@ document.addEventListener('scrapeAddress', () => {
                 let ipAddress = fields[4];
                 let ipType = fields[7]; // This will be 'srflx', 'relay', or 'host'
 
-                // --- START OF FIX: Logic is the same, but Logger is removed ---
+                // --- START OF FIX: New prioritization logic ---
 
-                // 1. If it's the REAL IP, always send it and set the flag.
+                // 1. If it's the REAL IP (srflx)
                 if (ipType === 'srflx') {
-                    hasSentSrflx = true;
-                    // Use console.log (safe) instead of Logger.DEBUG
-                    console.log("Chromegle Scraper: SRFLX (real) IP found. Sending.");
-                    window.dispatchEvent(new CustomEvent("displayScrapeData", {detail: {ip: ipAddress, type: ipType}}));
+                    // If we haven't sent it yet, send it.
+                    if (!hasSentSrflx) {
+                        console.log("Chromegle Scraper: SRFLX (real) IP found. Sending.");
+                        window.dispatchEvent(new CustomEvent("displayScrapeData", {detail: {ip: ipAddress, type: ipType}}));
+                        hasSentSrflx = true;
+                        hasSentAny = true; // A real IP is also "any" IP.
+                    }
                 } 
                 
-                // 2. If it's a RELAY IP, only send it if we haven't already found the real one.
-                else if (ipType === 'relay' && !hasSentSrflx) {
-                    // Use console.log (safe) instead of Logger.DEBUG
-                    console.log("Chromegle Scraper: Relay IP found. Sending as fallback.");
-                    window.dispatchEvent(new CustomEvent("displayScrapeData", {detail: {ip: ipAddress, type: ipType}}));
+                // 2. If it's a RELAY IP
+                else if (ipType === 'relay') {
+                    // Only send it if we haven't already sent a REAL one AND we haven't sent ANY (relay) one yet.
+                    if (!hasSentSrflx && !hasSentAny) {
+                        console.log("Chromegle Scraper: Relay IP found. Sending as fallback.");
+                        window.dispatchEvent(new CustomEvent("displayScrapeData", {detail: {ip: ipAddress, type: ipType}}));
+                        hasSentAny = true; // Mark that we've at least sent the relay IP.
+                    }
                 }
                 // --- END OF FIX ---
 
