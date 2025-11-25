@@ -1,0 +1,102 @@
+{
+  "name": "Chromegle-5.0",
+  "description": "Elevate your Omegle experience with IP information, custom themes, automation and other general improvements.",
+  "author": "github.com/EolnMsuk",
+  "homepage_url": "https://discord.gg/omeglestream",
+  "manifest_version": 3,
+  "version": "5.0",
+  "icons": {
+    "16": "public/images/IconLogo.png",
+    "48": "public/images/IconLogo.png",
+    "128": "public/images/IconLogo.png"
+  },
+  "background": {
+    "service_worker": "src/ext/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.umingle.com/video*"],
+      "js": ["src/core/face-bypass.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "css": [
+        "public/css/main.css",
+        "public/css/settings.css"
+      ],
+      "js": [
+        "src/ext/libs/jquery-2.1.1.min.js",
+        "src/ext/libs/js-cookie-2.2.1.min.js",
+        "src/ext/libs/micromodal.min.js",
+        "src/ext/utilities/utilities.js",
+        "src/core/module.js",
+        "src/core/elements.js",
+        "src/mods/chat-registry.js",
+        "src/mods/chat-manager.js",
+        "src/mods/auto-message.js",
+        "src/mods/auto-reconnect.js",
+        "src/mods/ip-tools/ip-handling.js",
+        "src/mods/ip-tools/ip-blocking.js",
+        "src/mods/auto-confirm.js",
+        "src/mods/unmoderated-chat.js",
+        "src/mods/sync-topics.js",
+        "src/mods/link-embed.js",
+        "src/mods/paste-menu.js",
+        "src/mods/filter-messages.js",
+        "src/mods/auto-skip/timer-skip.js",
+        "src/mods/auto-skip/age-skip.js",
+        "src/mods/auto-skip/word-skip.js",
+        "src/mods/auto-skip/repeat-skip.js",
+        "src/mods/video-tools/video-wrapper.js",
+        "src/mods/video-tools/video-fullscreen.js",
+        "src/mods/video-tools/video-screenshot.js",
+        "src/mods/video-tools/video-popout.js",
+        "src/mods/video-tools/video-blocking.js",
+        "src/mods/clear-interests.js",
+        "src/mods/broadcast.js",
+        "src/mods/voice-commands/speech-engine.js",
+        "src/mods/voice-commands/speech-manager.js",
+        "src/mods/voice-commands/intent-handlers.js",
+        "src/ext/utilities/logger.js",
+        "src/mods/theme-tools/theme-manager.js",
+        "src/mods/theme-tools/button-factory.js",
+        "src/mods/theme-tools/splash-image.js",
+        "src/mods/theme-tools/user-count.js",
+        "src/ext/settings/menu.js",
+        "src/ext/settings/settings.js",
+        "src/ext/settings/config.js",
+        "src/main.js"
+      ],
+      "matches": [
+        "*://*.umingle.com/video*"
+      ]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "/manifest.json",
+        "/public/themes/types/*",
+        "/public/*",
+        "/src/ext/scrape-ips.js",
+        "/public/html/blocked.html",
+        "/public/html/voicecmds.html",
+        "/public/images/SettingsButton.png"
+      ],
+      "matches": [
+        "*://*.umingle.com/*"
+      ]
+    }
+  ],
+  "incognito": "split",
+  "permissions": [
+    "storage"
+  ],
+  "externally_connectable": {
+    "matches": [
+      "*://*.umingle.com/*"
+    ]
+  }
+}
