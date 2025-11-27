@@ -41,6 +41,7 @@ Manual installation is fairly easy thanks to Chrome's great developer support:
 2. Open browser and navigate to chrome://extensions/ or edge://extensions/
 3. Enable "Developer Tools" on top-right of page
 4. Click "Load Unpacked" and double click the Chromegle-5.0-5.X and click OK
+5. Navigate to umingle.com/video and enable the dark mode in the top right.
 ```
 
 <img width="1802" height="1910" alt="asdf" src="https://github.com/user-attachments/assets/a29c3e2b-fd53-40fe-9504-345b0bc30a7a" />
