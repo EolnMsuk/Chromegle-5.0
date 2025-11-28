@@ -13,7 +13,7 @@ class Note {
 
     element = undefined;
 
-    emptyText = "discord.gg/OmegleStream";
+    emptyText = "Click to Add Note";
     emptyClass = "empty";
     baseClass = "chromegle-note";
 
