@@ -13,9 +13,7 @@
 - **IP Blocker (FIX)**
 - **IP Note (FIX)**
 - **Hide Watermark**
-
 - Geolocation
-
 - Session Counter
 - Calltime Counter
 
