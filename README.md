@@ -6,7 +6,7 @@
 - [Authors](#authors)
 - [Project License](#license)
 
-## Tested Features
+## Features
 - **Country Blocker - *New***
 - **Report Detection - *New***
 - **Face Bypass - *New***
