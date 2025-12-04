@@ -9,11 +9,10 @@
 ## Tested Features
 - **Country Blocker - *New***
 - **Report Detection - *New***
-- **Relay Detection - *New***
 - **Face Bypass - *New***
-- **IP Blocker (FIX) - *NEW***
-- **IP Note (FIX) - *New***
-- **Hide Watermark - *New***
+- **IP Blocker (FIX)**
+- **IP Note (FIX)**
+- **Hide Watermark
 
 - Geolocation
 
