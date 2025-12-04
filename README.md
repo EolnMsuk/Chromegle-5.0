@@ -12,7 +12,7 @@
 - **Face Bypass - *New***
 - **IP Blocker (FIX)**
 - **IP Note (FIX)**
-- **Hide Watermark
+- **Hide Watermark**
 
 - Geolocation
 
