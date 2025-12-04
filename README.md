@@ -1,7 +1,7 @@
 ## Chromegle-5.0: IP Pulller & Chat Info for Umingle!
 *A Javascript Chromium based Browsers (Chrome, Edge, Opera).*
 
-- [Features](#tested-features)
+- [Features](#features)
 - [Installation](#installation)
 - [Authors](#authors)
 - [Project License](#license)
