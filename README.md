@@ -34,7 +34,7 @@
 
 # Installation
 
-Manual installation is fairly easy thanks to Chrome's great developer support:
+Installation is fairly easy thanks to Chrome's great developer support:
 ```
 1. Download and unzip latest release to a folder
 2. Open browser and navigate to chrome://extensions/ or edge://extensions/
