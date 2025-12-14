@@ -924,11 +924,6 @@ COLLEGE BUTTON
     border-color: #ac2925;
 }
 
-/* Hide the uhmegle logo link but keep its space */
-a.logoLink {
-    visibility: hidden !important;
-}
-
 /* Style the 'You both like...' matching interests text */
 .matchingInterests {
     color: orange !important;
