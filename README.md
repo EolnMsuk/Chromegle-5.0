@@ -45,7 +45,7 @@ Installation is fairly easy thanks to Chrome's great developer support:
 
 ## Authors
 
-* **EolnMsuk** - Current - *Additional Features & Support* - [EolnMsuk](https://github.com/EolnMsuk)
+* **EolnMsuk** - Current - *Additional Features & Support* - [EolnMsuk](https://github.com/EolnMsuk) / [Venmo](https://account.venmo.com/u/eolnmsuk)
 * **xanzinfl** - 2025 - *Additional Features & Support* - [xanzinfl](https://github.com/xanzinfl)
 * **flouflouit** - 2025 - *Migration to Uhmegle* - [flouflouit](https://github.com/flouflouit)
 * **Isaac Kogan** - 2021 - *Initial Release* - [isaackogan](https://github.com/isaackogan)
