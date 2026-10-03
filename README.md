@@ -35,21 +35,32 @@ The compact header reads **Chromegle 6.0**. Face Detection/face bypass and Repor
 
 `sidebar.js` requests the native browser side panel on the first trusted click or keypress, without adding any UI to the page. A successful open removes the gesture listeners so manually closing the sidebar is respected. If the browser rejects opening, a later gesture can retry. The sidebar follows the active tab and keeps its styles and flag font inside the extension document.
 
-Notes and block lists are stored locally. Notes are plain text keyed by normalized IP; empty notes delete the entry. Unsaved drafts survive same-IP reconnections. Editing a note pauses auto-skip for that connection.
+Encounter counts, notes and block lists are stored locally. Each normalized IP is counted once per connection session, even when ICE details change or the panel is reopened. Counts include the current encounter, begin when this feature is installed, and have no expiry; they survive browser restarts and extension updates. Removing the extension or clearing its storage removes these counts. The unlimitedStorage permission avoids the normal local-storage quota for the growing history. Notes are plain text keyed by normalized IP; empty notes delete the entry. Unsaved drafts survive same-IP reconnections. Editing a note pauses auto-skip for that connection.
 
 ## Architecture
 
 - `bridge.js` observes WebRTC in MAIN through constructor/method proxies while preserving native prototypes, descriptors and return values. It sends observations and validated skip results over a MessageChannel.
 - `content.js` holds filter and connection state in the isolated world. It transfers the port in one same-window, same-origin startup message. This handoff and the hooks remain observable and are not authentication against a hostile page. Notes, geo, country lists and block lists are never sent into MAIN.
 - `background.js` validates senders, routes panels by tab, serializes storage writes and performs fixed-endpoint geolocation. The provider receives only the selected public IP, with credentials omitted. Results are cached for 30 minutes (up to 200 entries), with a six-second timeout and a one-second request interval. Disable geolocation to stop lookups.
-- `manifest.json` uses the native side panel with no web-accessible resources or in-page panel. UI uses locally packaged scripts with MV3 CSP. The extension requests `storage`, `sidePanel`, and the existing geolocation host permission.
+- `manifest.json` uses the native side panel with no web-accessible resources or in-page panel. UI uses locally packaged scripts with MV3 CSP. The extension requests `storage`, `unlimitedStorage`, `sidePanel`, and the existing geolocation host permission.
 
 The existing provider is `https://m52o1m3c29.execute-api.eu-central-1.amazonaws.com/prod/geoip2?ip_address=...`.
+
+## Validation
+
+Run behavioral tests and the disposable local Edge fixture:
+
+```text
+node --test tests/core.test.cjs
+python tests/edge-smoke.py
+```
+
+The Node suite covers selected-pair mapping, stale results, retained geo, relay filtering, cooldown boundaries across reconnections, duplicate click prevention, cancellation, removed hooks, storage, native-sidebar gesture handling and panel routing. The Edge fixture checks real MAIN/ISOLATED handoff and loopback WebRTC, absence of an in-page panel, compact native-panel layout, notes/settings, relay display and unchanged geo rendering, auto-skip and retained disconnect state.
+
+Browser tests use a disposable extension/profile and a local geolocation fixture, without live chats or external geo requests. They require Python/Selenium and Edge. Results and a screenshot are saved inside `validation/`. `REVIEW-5.0.md` describes the prior implementation.
 
 ## References and license
 
 [Chrome sidePanel API](https://developer.chrome.com/docs/extensions/reference/api/sidePanel), [content-script execution worlds](https://developer.chrome.com/docs/extensions/develop/concepts/content-scripts), [MessageChannel and port transfer](https://developer.mozilla.org/en-US/docs/Web/API/Channel_Messaging_API), [event isTrusted](https://developer.mozilla.org/en-US/docs/Web/API/Event/isTrusted), [Function.toString](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/toString), [WebRTC statistics](https://www.w3.org/TR/webrtc-stats/).
 
 The inherited LICENSE is retained. The upstream README named GPL-3.0 while its LICENSE contains CC0; this inconsistency remains recorded. Bundled Noto Color Emoji uses the SIL Open Font License in `assets/FONT-LICENSE.txt`. Legacy project authors: EolnMsuk, xanzinfl, flouflouit and Isaac Kogan.
-
-[Venmo](https://venmo.com/u/rustonrails) | Bitcoin: `31uHLpioo1TbxAmo9kM7rrKcLz3wvcoZaL`

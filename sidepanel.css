@@ -1,8 +1,19 @@
 /* Font registration is confined to this extension document. */
 @font-face{font-family:CGFlags;src:url('assets/NotoColorEmoji.ttf') format('truetype');font-display:swap}
 #settingsView iframe{display:block;width:100%;height:75vh;border:0;margin-top:14px}
-#geo{font-size:20px;line-height:1.4;font-weight:600;overflow-wrap:anywhere}
+#geo,#seenCount{font-size:20px;line-height:1.4;font-weight:600;overflow-wrap:anywhere}
 #geo p{margin:0}#geo .country-row{display:flex;align-items:center}#country{min-width:0}#locality{margin-top:4px}.country-row .flag{flex-shrink:0}
 body{min-width:0;max-width:none}header{padding:22px 18px}main{padding:20px 18px}.row{flex-wrap:wrap}.ip{font:600 16px ui-monospace,monospace;overflow-wrap:anywhere}.warning{color:#ffaaaa;font-size:12px}.flag{font-family:CGFlags,system-ui;font-size:32px;margin-right:8px;vertical-align:middle}textarea{min-height:90px;resize:vertical;margin-bottom:10px}#connectionStatus,#error{font-size:12px;color:#a8e7ce;min-height:18px}footer{margin-top:24px}
 
 header{padding:10px 14px}header p{font-size:11px;margin-top:4px}main{padding:12px 14px}#connectionView section>p:first-child{margin-top:0}#explanation:empty{display:none}
+
+:root{--connection-accent:#8acbff}
+#connectionView .ip{color:var(--connection-accent)}
+#connectionView button{background:var(--connection-accent);border-color:var(--connection-accent);color:#102b42}
+#connectionView button:hover{background:#b5dfff}
+#seenCount{margin:16px 0 6px}
+#seenCount + .ip{margin-top:6px}
+.project-links{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-bottom:16px}
+.project-links a{color:var(--connection-accent);font-size:13px;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.project-links a:hover{color:#c4e5ff}
+.project-links a:focus-visible{outline:2px solid var(--connection-accent);outline-offset:4px;border-radius:2px}

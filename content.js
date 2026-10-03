@@ -1,10 +1,11 @@
-﻿/* ISOLATED world: state and extension messaging only; no host DOM mutations. */
+/* ISOLATED world: state and extension messaging only; no host DOM mutations. */
 (() => {
   'use strict';
   const C = ChromegleCore;
   let prefs = C.settings(), blocked = [], ready = false, connected = false;
   let current = null, lastConnection = null, attempted = '', geoVersion = 0;
   let status = '', active = false, statusBeforeGap = '';
+  const encounters = new Map();
   const channel = new MessageChannel();
   const send = (kind, data) => channel.port1.postMessage({ kind, data });
   // Notes, block lists and geolocation never travel into MAIN.
@@ -40,6 +41,26 @@
       target.geoStatus = error.message; publish();
     }
   }
+  async function countEncounter(target) {
+    if (!target.ip) return;
+    // One count per normalized IP and session, independent of ICE type or panel state.
+    const key = target.session + '|' + target.ip;
+    let task = encounters.get(key);
+    if (!task) {
+      task = call({ action: 'encounter', ip: target.ip });
+      encounters.set(key, task);
+    }
+    try {
+      await task;
+      const data = await chrome.storage.local.get('seen:' + target.ip);
+      const count = data['seen:' + target.ip];
+      if (current !== target) return;
+      target.seenCount = count; publish();
+    } catch {
+      if (current !== target) return;
+      target.seenError = 'Encounter count could not be saved.'; publish();
+    }
+  }
   function connection(data) {
     lastConnection = data;
     if (!ready) return;
@@ -66,6 +87,7 @@
     else if (attempted) attempted = key;
     status = ''; statusBeforeGap = '';
     publish(); schedule();
+    void countEncounter(current);
     if (!current.geo) void locate(current);
   }
   channel.port1.onmessage = event => {
@@ -94,6 +116,9 @@
   });
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
+    if (current?.ip && changes['seen:' + current.ip]) {
+      current.seenCount = changes['seen:' + current.ip].newValue;
+    }
     if (changes.settings) {
       const geoWasEnabled = prefs.geoEnabled;
       prefs = C.settings(changes.settings.newValue); configure(); attempted = '';

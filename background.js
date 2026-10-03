@@ -65,6 +65,16 @@ async function lookup(address) {
   pending.set(address, task);
   try { return await task; } finally { pending.delete(address); }
 }
+async function recordEncounter(message) {
+  const address = C.ip(message.ip);
+  if (!address) throw new Error('A valid IP is required to count an encounter');
+  const key = 'seen:' + address;
+  const data = await chrome.storage.local.get(key);
+  const previous = Number.isSafeInteger(data[key]) && data[key] >= 0 ? data[key] : 0;
+  const count = previous + 1;
+  await chrome.storage.local.set({ [key]: count });
+  return count;
+}
 async function mutate(message) {
   const data = await chrome.storage.local.get({ settings: C.defaults, blocked: [], notes: {} });
   if (message.action === 'settings') {
@@ -100,6 +110,10 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     task = chrome.sidePanel.open({ windowId: sender.tab.windowId });
   }
   else if (message.action === 'geo' && (contentPage(sender) || extensionPage(sender))) task = lookup(C.ip(message.ip));
+  else if (message.action === 'encounter' && contentPage(sender)) {
+    task = writes.then(() => recordEncounter(message));
+    writes = task.catch(() => {});
+  }
   else if (message.action === 'panel' && extensionPage(sender)) task = panelCommand(message);
   else if (['settings','block','note'].includes(message.action) && extensionPage(sender)) {
     task = writes.then(() => mutate(message));

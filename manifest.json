@@ -4,7 +4,7 @@
   "version": "6.0.0",
   "minimum_chrome_version": "116",
   "description": "Local ICE connection information, IP notes and skip filters for Umingle.",
-  "permissions": ["storage", "sidePanel"],
+  "permissions": ["storage", "unlimitedStorage", "sidePanel"],
   "host_permissions": ["https://m52o1m3c29.execute-api.eu-central-1.amazonaws.com/*"],
   "background": {"service_worker": "background.js"},
   "action": {"default_title": "Open Chromegle"},

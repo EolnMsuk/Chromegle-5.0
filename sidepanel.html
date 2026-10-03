@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Chromegle 6.0</title><link rel="stylesheet" href="settings.css"><link rel="stylesheet" href="sidepanel.css"></head>
 <body>
@@ -10,6 +10,7 @@
         <p class="country-row"><span id="flag" class="flag" aria-hidden="true"></span><span id="country"></span></p>
         <p id="locality" hidden></p>
       </div>
+      <p id="seenCount" role="status" aria-live="polite" hidden></p>
       <p id="ip" class="ip">Waiting for remote video…</p><p id="ice" class="warning" hidden></p>
       <p id="explanation" class="help"></p>
       <div class="row"><button id="block" disabled>Block IP</button><button id="retry" disabled>Retry location</button></div>
@@ -18,7 +19,12 @@
       <p id="connectionStatus" role="status" aria-live="polite"></p>
     </section>
     <button id="settings">Settings, blocked IPs &amp; saved notes</button><p id="error" role="status" aria-live="polite"></p>
-    <footer>IP location is approximate. Shared networks, proxies and VPNs can represent multiple people.</footer>
+    <footer>
+      <nav class="project-links" aria-label="Project and support">
+        <a href="https://github.com/EolnMsuk/Chromegle-5.0" target="_blank" rel="noopener noreferrer">GitHub Repo</a>
+        <a href="https://venmo.com/u/rustonrails" target="_blank" rel="noopener noreferrer">Donate to EolnMsuk</a>
+      </nav>
+      IP location is approximate. Shared networks, proxies and VPNs can represent multiple people.</footer>
     </div>
     <section id="settingsView" hidden>
       <button id="back">Back to connection</button>

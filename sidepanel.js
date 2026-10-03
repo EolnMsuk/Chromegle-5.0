@@ -1,4 +1,4 @@
-﻿(() => {
+(() => {
   'use strict';
   const C = ChromegleCore, $ = id => document.getElementById(id);
   const text = (id, value) => { if ($(id).textContent !== value) $(id).textContent = value; };
@@ -20,6 +20,9 @@
       $('note').value = drafts.get(noteKey) ?? notes[current?.ip] ?? '';
     } else if (!dirty && $('note').value !== (notes[current?.ip] || '')) $('note').value = notes[current?.ip] || '';
     text('ip', current ? current.ip || current.address || 'Address withheld' : 'Waiting for remote video…');
+    const showSeenCount = Boolean(current?.ip && Number.isSafeInteger(current.seenCount) && current.seenCount > 1);
+    text('seenCount', showSeenCount ? 'You have seen this person ' + current.seenCount + ' times' : '');
+    $('seenCount').hidden = !showSeenCount;
     text('ice', current ? C.warning(current.type) : '');
     $('ice').hidden = !$('ice').textContent;
     text('flag', C.flag(current?.geo?.code));
