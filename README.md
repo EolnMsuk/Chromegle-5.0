@@ -46,19 +46,6 @@ Notes and block lists are stored locally. Notes are plain text keyed by normaliz
 
 The existing provider is `https://m52o1m3c29.execute-api.eu-central-1.amazonaws.com/prod/geoip2?ip_address=...`.
 
-## Validation
-
-Run behavioral tests and the disposable local Edge fixture:
-
-```text
-node --test tests/core.test.cjs
-python tests/edge-smoke.py
-```
-
-The Node suite covers selected-pair mapping, stale results, retained geo, relay filtering, cooldown boundaries across reconnections, duplicate click prevention, cancellation, removed hooks, storage, native-sidebar gesture handling and panel routing. The Edge fixture checks real MAIN/ISOLATED handoff and loopback WebRTC, absence of an in-page panel, compact native-panel layout, notes/settings, relay display and unchanged geo rendering, auto-skip and retained disconnect state.
-
-Browser tests use a disposable extension/profile and a local geolocation fixture, without live chats or external geo requests. They require Python/Selenium and Edge. Results and a screenshot are saved inside `validation/`. `REVIEW-5.0.md` describes the prior implementation.
-
 ## References and license
 
 [Chrome sidePanel API](https://developer.chrome.com/docs/extensions/reference/api/sidePanel), [content-script execution worlds](https://developer.chrome.com/docs/extensions/develop/concepts/content-scripts), [MessageChannel and port transfer](https://developer.mozilla.org/en-US/docs/Web/API/Channel_Messaging_API), [event isTrusted](https://developer.mozilla.org/en-US/docs/Web/API/Event/isTrusted), [Function.toString](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/toString), [WebRTC statistics](https://www.w3.org/TR/webrtc-stats/).
