@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Chromegle-6.0",
+  "version": "6.0.0",
+  "minimum_chrome_version": "116",
+  "description": "Local ICE connection information, IP notes and skip filters for Umingle.",
+  "permissions": ["storage", "sidePanel"],
+  "host_permissions": ["https://m52o1m3c29.execute-api.eu-central-1.amazonaws.com/*"],
+  "background": {"service_worker": "background.js"},
+  "action": {"default_title": "Open Chromegle"},
+  "side_panel": {"default_path": "sidepanel.html"},
+  "options_page": "settings.html",
+  "content_scripts": [
+    {"matches": ["https://umingle.com/*", "https://www.umingle.com/*"], "js": ["bridge.js"], "run_at": "document_start", "world": "MAIN"},
+    {"matches": ["https://umingle.com/*", "https://www.umingle.com/*"], "js": ["core.js", "content.js", "sidebar.js"], "run_at": "document_start"}
+  ],
+  "content_security_policy": {"extension_pages": "script-src 'self'; object-src 'none'"}
+}

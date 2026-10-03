@@ -1,0 +1,29 @@
+﻿<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Chromegle 6.0</title><link rel="stylesheet" href="settings.css"><link rel="stylesheet" href="sidepanel.css"></head>
+<body>
+  <header><h1>Chromegle <span>6.0</span></h1><p id="tabStatus">Connecting…</p></header>
+  <main>
+    <div id="connectionView">
+    <section aria-label="Connection information">
+      <div id="geo">
+        <p class="country-row"><span id="flag" class="flag" aria-hidden="true"></span><span id="country"></span></p>
+        <p id="locality" hidden></p>
+      </div>
+      <p id="ip" class="ip">Waiting for remote video…</p><p id="ice" class="warning" hidden></p>
+      <p id="explanation" class="help"></p>
+      <div class="row"><button id="block" disabled>Block IP</button><button id="retry" disabled>Retry location</button></div>
+      <label for="note">Private note for this IP</label><textarea id="note" maxlength="2000" disabled></textarea>
+      <button id="save" disabled>Save note</button>
+      <p id="connectionStatus" role="status" aria-live="polite"></p>
+    </section>
+    <button id="settings">Settings, blocked IPs &amp; saved notes</button><p id="error" role="status" aria-live="polite"></p>
+    <footer>IP location is approximate. Shared networks, proxies and VPNs can represent multiple people.</footer>
+    </div>
+    <section id="settingsView" hidden>
+      <button id="back">Back to connection</button>
+      <iframe src="settings.html" title="Chromegle settings"></iframe>
+    </section>
+  </main>
+  <script src="core.js"></script><script src="sidepanel.js"></script>
+</body></html>

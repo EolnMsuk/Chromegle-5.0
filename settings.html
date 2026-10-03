@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Chromegle 6.0 settings</title><link rel="stylesheet" href="settings.css"></head>
+<body>
+  <header><h1>Chromegle <span>6.0</span></h1></header>
+  <main>
+    <form id="preferences">
+      <section><h2>Connection &amp; filters</h2>
+        <label class="toggle"><input type="checkbox" id="geoEnabled"> Look up IP location</label>
+        <p class="help">Uses the same geolocation provider as 5.0, without a key. The selected remote IP is sent to that provider. Notes and block lists stay in this browser.</p>
+        <label class="toggle"><input type="checkbox" id="ipSkip"> Auto-skip blocked IPs</label>
+        <label class="toggle"><input type="checkbox" id="countrySkip"> Auto-skip blocked countries</label>
+        <label for="countries">Country codes to skip</label>
+        <input type="text" id="countries" placeholder="e.g. US, GB, FR" autocomplete="off">
+        <p class="help">Two-letter country codes, separated by commas or spaces. Country skipping requires location lookup. No countries are blocked by default. Relay locations are excluded from country skipping.</p>
+        <details><summary>Find a country code</summary><input id="countrySearch" type="search" placeholder="Search country or code" aria-label="Search country codes"><div id="countryList"></div></details>
+        <p class="help">Auto-skip waits a random 2-5 seconds between attempts, verifies the same visible connection, and clicks one enabled Next/Skip button once per session. If no unambiguous control exists, skip manually.</p>
+      </section>
+      <div class="savebar"><button type="submit">Save settings</button><span id="status" role="status" aria-live="polite"></span></div>
+    </form>
+    <section><h2>Blocked IPs</h2><form id="addBlock" class="row"><input id="newIP" placeholder="IPv4 or IPv6 address" aria-label="IP address to block" required><button type="submit">Block IP</button></form><div id="blockedList"></div></section>
+    <section><h2>Saved notes</h2><p class="help">Add notes from the extension side panel. Clear a note here to delete it.</p><div id="noteList"></div></section>
+    <footer>The native browser sidebar opens on your first click or keypress in Umingle. You can also open it from the extension toolbar icon. IP locations are approximate; shared networks, proxies and VPNs may represent multiple people. Relay addresses and locations remain visible with a warning.</footer>
+  </main>
+  <script src="core.js"></script><script src="settings.js"></script>
+</body></html>
