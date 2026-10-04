@@ -60,8 +60,6 @@ node --test tests/*.test.cjs
 
 The tests run the bridge and content scripts together with simulated WebRTC, DOM controls, extension messaging and a deterministic clock. They cover both random timing boundaries, the two-click sequence, cooldown across peer changes, transient stats failures, site country filtering, cancellation, stale request results, automatic geo retry/backoff, unchanged display data, stale geo results, and persistent encounter counting. These tests do not contact live chats or external geolocation services.
 
-## References and license
-
-[Chrome sidePanel API](https://developer.chrome.com/docs/extensions/reference/api/sidePanel), [content-script execution worlds](https://developer.chrome.com/docs/extensions/develop/concepts/content-scripts), [MessageChannel and port transfer](https://developer.mozilla.org/en-US/docs/Web/API/Channel_Messaging_API), [event isTrusted](https://developer.mozilla.org/en-US/docs/Web/API/Event/isTrusted), [Function.toString](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/toString), [WebRTC statistics](https://www.w3.org/TR/webrtc-stats/).
+## Donate
 
 [Venmo](https://venmo.com/u/rustonrails) | Bitcoin: `31uHLpioo1TbxAmo9kM7rrKcLz3wvcoZaL`
