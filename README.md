@@ -13,21 +13,25 @@ No build step, API key or account is required. Existing notes and block lists ke
 
 ## Connection display
 
-The extension reads the selected remote ICE candidate carrying the video track in `#otherVideo`. It checks stats every 700 ms to detect reconnections and selected-address changes; unchanged snapshots do not trigger lookups or UI updates. Temporary missing snapshots retain the last IP and geo with a last-known status. Auto-skip is disabled while no current connection is confirmed.
+The extension reads the selected remote ICE candidate carrying the video track in `#otherVideo`. It checks stats every 700 ms to detect reconnections and selected-address changes. Live peer/track identity is tracked separately: missing or failed stats retain the last IP and geo without cancelling auto-skip. A missing or disconnected peer retains the last display with a last-known status and cancels pending clicks.
 
-A new session with the same IP reuses its displayed geo. A changed IP starts a new lookup, and stale asynchronous results cannot overwrite a replacement connection. Retry location preserves existing geo while the request runs. IP, country flag and geo text are only rewritten when their displayed values change. Disabling geolocation clears geo intentionally.
+A new session with the same IP reuses its displayed geo. A changed IP starts a new lookup, and stale asynchronous results cannot overwrite a replacement connection. Failed lookups retry automatically after 2 seconds, backing off to at most 30 seconds. Successful results are checked every 30 seconds through the background cache. Automatic and manual retries preserve existing geo while requests run or fail. Unchanged results do not publish another UI update. IP, country flag and geo text are only rewritten when their displayed values change. Disabling geolocation clears geo intentionally and stops retries.
 
-Relay/TURN IPs and available geo remain visible with a warning that the location belongs to the relay server. VPN/proxy IPs are displayed normally; WebRTC alone does not reliably identify VPN use. Country skipping continues to exclude relay/unknown ICE types. IP blocking applies to all valid addresses, including relays.
+Relay/TURN IPs and available geo remain visible with a warning that the location belongs to the relay server. VPN/proxy IPs are displayed normally; WebRTC alone does not reliably identify VPN use. Country skipping uses Umingle's participant label for every ICE type. IP blocking applies to all valid addresses, including relays.
 
 Locations are approximate, and shared addresses do not identify a person. Withheld, hostname-only or private/reserved addresses cannot be geolocated. No additional ICE probes, camera or microphone requests are introduced.
 
 ## Auto-skip
 
-IP skipping is enabled by default with an empty block list. Country skipping is optional and requires geolocation and selected country codes.
+IP skipping is enabled by default with an empty block list. Country skipping is optional and compares the current `#countryName` text (for example, `United States`) against selected country codes. It does not use IP geolocation and works with geolocation disabled or an unavailable IP. Missing or unrecognized country labels do not trigger country skipping.
 
-Both filters use the same random 2-5 second wait and a cooldown deadline that survives reconnections, settings changes and cancelled attempts. The bridge prevents another click for a session already skipped (up to the most recent 200 sessions). Before clicking, it revalidates the visible session and IP. Missing, hidden, disabled or ambiguous controls do not produce a click.
+Both filters wait a random 1-2 seconds before clicking `Skip`, then a separately randomized 1-2 seconds before clicking `Really?`. After confirmation, a random 4-6 second cooldown prevents the next skip sequence from starting early, including across reconnections, settings changes and cancellations. The bridge prevents another confirmed sequence for a session already skipped (up to the most recent 200 sessions). Before each click, it revalidates the live peer/track identity and visibility, plus the last observed IP for IP skips or the site country label for country skips. Stats refreshes and ICE type changes do not reset an attempt; IP discovery or address changes do not interrupt a country-based attempt for the same peer and label.
 
-Recognized buttons include `.skipButton`, `#skipButton`, `[data-action="skip"]`, `[data-action="next"]` and `#nextButton`, with a conservative fallback for a unique Next/Skip label. Escape, manual button interaction, note editing, visibility changes and connection changes cancel pending attempts. There are no synthetic keyboard events. A programmatic click reports an attempt, not a confirmed successful skip; live Umingle acceptance remains unverified.
+The bridge targets a unique, visible, enabled `button.skipButton` (also recognizing `button#skipButton` and `button[data-action="skip"]`). It reads the nested `.mainText` for `Skip` or `Really?` and clicks the parent button, ignoring the `.subText` Esc hint. It can also match another button by its main label. Missing, hidden, disabled or ambiguous controls do not produce a click.
+
+When a click target cannot be found, the bridge falls back to bubbling Escape keydown/keyup events. If the first button is missing, it sends two Escape presses 1-2 seconds apart. If the first click leaves the label on `Skip`, it switches to the same two-Escape sequence. If the first click advances but the confirmation button is missing, one Escape completes that sequence. The same 4-6 second cooldown applies after the final action. Each action rechecks the connection, visibility and filter target; completed sessions are not repeated. Synthetic keys may be ignored by sites requiring trusted input, so fallback status reports an attempt rather than confirmed success.
+
+Real Escape presses, manual control interaction, note editing, visibility changes and connection changes cancel pending attempts. The extension's own Escape events do not cancel its sequence. A cancelled request's late result cannot overwrite a newer attempt. Manual interaction and note editing keep that session paused. Live Umingle acceptance remains unverified.
 
 ## Sidebar and storage
 
@@ -48,16 +52,13 @@ The existing provider is `https://m52o1m3c29.execute-api.eu-central-1.amazonaws.
 
 ## Validation
 
-Run behavioral tests and the disposable local Edge fixture:
+Run the behavioral regression tests with Node.js:
 
 ```text
-node --test tests/core.test.cjs
-python tests/edge-smoke.py
+node --test tests/*.test.cjs
 ```
 
-The Node suite covers selected-pair mapping, stale results, retained geo, relay filtering, cooldown boundaries across reconnections, duplicate click prevention, cancellation, removed hooks, storage, native-sidebar gesture handling and panel routing. The Edge fixture checks real MAIN/ISOLATED handoff and loopback WebRTC, absence of an in-page panel, compact native-panel layout, notes/settings, relay display and unchanged geo rendering, auto-skip and retained disconnect state.
-
-Browser tests use a disposable extension/profile and a local geolocation fixture, without live chats or external geo requests. They require Python/Selenium and Edge. Results and a screenshot are saved inside `validation/`. `REVIEW-5.0.md` describes the prior implementation.
+The tests run the bridge and content scripts together with simulated WebRTC, DOM controls, extension messaging and a deterministic clock. They cover both random timing boundaries, the two-click sequence, cooldown across peer changes, transient stats failures, site country filtering, cancellation, stale request results, automatic geo retry/backoff, unchanged display data, stale geo results, and persistent encounter counting. These tests do not contact live chats or external geolocation services.
 
 ## References and license
 

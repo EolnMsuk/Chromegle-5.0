@@ -76,10 +76,10 @@
   }
   function flag(code) { return countryCodes.includes(code) ? String.fromCodePoint(...[...code].map(c => 127397 + c.charCodeAt())) : ''; }
   function skipReason(current, prefs, blocked) {
-    if (!current?.ip) return '';
-    if (prefs.ipSkip && blocked.includes(current.ip)) return 'Blocked IP';
-    // A relay's country is the server country, not the user's country.
-    if (prefs.countrySkip && prefs.geoEnabled && ['host','srflx','prflx'].includes(current.type) && current.geo?.code && prefs.countries.includes(current.geo.code)) return 'Blocked country';
+    if (!current) return '';
+    if (prefs.ipSkip && current.ip && blocked.includes(current.ip)) return 'Blocked IP';
+    // Country filters use the site's current participant label, independently of IP geo.
+    if (prefs.countrySkip && current.countryCode && prefs.countries.includes(current.countryCode)) return 'Blocked country';
     return '';
   }
   const api = Object.freeze({ defaults, countryCodes, countryCode, regions, ip, publicIP, settings, candidate, iceType, warning, selectedRemote, normalizeGeo, flag, skipReason });

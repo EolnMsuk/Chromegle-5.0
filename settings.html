@@ -12,9 +12,9 @@
         <label class="toggle"><input type="checkbox" id="countrySkip"> Auto-skip blocked countries</label>
         <label for="countries">Country codes to skip</label>
         <input type="text" id="countries" placeholder="e.g. US, GB, FR" autocomplete="off">
-        <p class="help">Two-letter country codes, separated by commas or spaces. Country skipping requires location lookup. No countries are blocked by default. Relay locations are excluded from country skipping.</p>
+        <p class="help">Two-letter country codes, separated by commas or spaces. Country skipping uses the country shown by Umingle, even when IP location lookup is off or the connection uses a relay. No countries are blocked by default.</p>
         <details><summary>Find a country code</summary><input id="countrySearch" type="search" placeholder="Search country or code" aria-label="Search country codes"><div id="countryList"></div></details>
-        <p class="help">Auto-skip waits a random 2-5 seconds between attempts, verifies the same visible connection, and clicks one enabled Next/Skip button once per session. If no unambiguous control exists, skip manually.</p>
+        <p class="help">Auto-skip clicks Skip, waits a random 1-2 seconds, then clicks Really? for the same visible connection. If the controls cannot be found, it tries Escape with the same timing. A random 4-6 second cooldown follows the final action.</p>
       </section>
       <div class="savebar"><button type="submit">Save settings</button><span id="status" role="status" aria-live="polite"></span></div>
     </form>

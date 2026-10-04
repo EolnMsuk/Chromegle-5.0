@@ -30,28 +30,39 @@
   let port = null;
   let sequence = 0, prefs = C.settings(), busy = false, skipToken = 0;
   let nextSkipAt = 0;
+  let lastSnapshot = null;
   const skippedSessions = new Set();
   const emit = (kind, data) => { try { port?.postMessage({ kind, data }); } catch { /* Navigating away. */ } };
   const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-  const delay = () => 2000 + Math.floor(crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296 * 3001);
+  const delay = (min, max) => min + Math.floor(crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296 * (max - min + 1));
+  const countryName = () => (document.querySelector('#countryName')?.textContent || '').trim().slice(0, 160);
   function otherTracks() {
     return document.querySelector('#otherVideo')?.srcObject?.getVideoTracks?.().filter(t => t.readyState === 'live') || [];
   }
-  async function snapshot() {
+  function currentPeer() {
     const tracks = otherTracks();
     if (!tracks.length) return null;
     const matches = [...connections].filter(entry => !['closed','failed','disconnected'].includes(entry.pc.connectionState) && entry.pc.getReceivers().some(r => tracks.some(t => r.track === t || r.track?.id === t.id)));
     if (matches.length !== 1) return null;
-    const entry = matches[0], generation = entry.generation;
-    const stats = await entry.pc.getStats();
-    // Awaiting stats must not attach an old result to a replacement stream.
-    if (generation !== entry.generation || !tracks.every(t => otherTracks().some(now => now.id === t.id)) || ['closed','failed','disconnected'].includes(entry.pc.connectionState)) return null;
+    const entry = matches[0];
+    return { entry, tracks, session: entry.id + ':' + entry.generation + ':' + tracks.map(t => t.id).sort().join(',') };
+  }
+  async function snapshot() {
+    const peer = currentPeer();
+    if (!peer) return null;
+    const { entry, tracks, session } = peer;
+    let stats;
+    try { stats = await entry.pc.getStats(); } catch { /* Stats can be temporarily unavailable on a live peer. */ }
+    // Connection identity does not depend on a successful stats refresh.
+    if (currentPeer()?.session !== session) return null;
+    const observation = { session, countryName: countryName(), selected: false };
+    if (!stats) return observation;
     const remote = C.selectedRemote(stats, tracks.map(t => t.id));
-    if (!remote) return null;
+    if (!remote) return observation;
     const address = remote.address || remote.ip || '';
     const fallback = entry.candidates.find(c => c.address === address && c.port === remote.port && c.protocol === remote.protocol);
     return {
-      session: entry.id + ':' + generation + ':' + tracks.map(t => t.id).sort().join(','),
+      ...observation,
       ip: C.ip(address), address: String(address).slice(0, 100),
       type: C.iceType(remote.candidateType || fallback?.type), selected: true
     };
@@ -114,43 +125,73 @@
       return pc;
     }});
   }
-  const SKIP_SELECTOR = 'button.skipButton, button#skipButton, button[data-action="skip"], button[data-action="next"], button#nextButton';
-  function skipControl() {
-    const usable = button => !button.disabled && button.getAttribute('aria-disabled') !== 'true' && !button.closest('[hidden], [inert]') && button.getClientRects().length > 0 && getComputedStyle(button).visibility !== 'hidden';
-    const explicit = [...document.querySelectorAll(SKIP_SELECTOR)].filter(usable);
-    if (explicit.length === 1) return explicit[0];
-    if (explicit.length > 1) return null;
-    // Conservative fallback; never click arbitrary links or ambiguous controls.
-    const labelled = [...document.querySelectorAll('button')].filter(button => usable(button) && /^(next|skip|next stranger|skip stranger)$/i.test((button.getAttribute('aria-label') || button.textContent || '').trim()));
+  function skipControl(label) {
+    const usable = element => !element.disabled && !element.closest('[hidden], [inert], [disabled], [aria-disabled="true"]') && element.getClientRects().length > 0 && getComputedStyle(element).visibility !== 'hidden';
+    // Read only the main label: the parent button also contains the "Esc" hint.
+    // Click the button itself, including when the label has no layout box.
+    const matches = button => usable(button) && (button.querySelector('.mainText')?.textContent || button.getAttribute('aria-label') || button.textContent || '').trim().toLowerCase() === label.toLowerCase();
+    const explicit = [...document.querySelectorAll('button.skipButton, button#skipButton, button[data-action="skip"]')].filter(matches);
+    if (explicit.length) return explicit.length === 1 ? explicit[0] : null;
+    const labelled = [...document.querySelectorAll('button')].filter(matches);
     return labelled.length === 1 ? labelled[0] : null;
+  }
+  function pressEscape() {
+    // Dispatch one bubbling key press so document/window handlers see it once.
+    const target = document.activeElement || document.body || document;
+    for (const type of ['keydown', 'keyup']) {
+      target.dispatchEvent(new KeyboardEvent(type, {
+        key: 'Escape', code: 'Escape', keyCode: 27, which: 27,
+        bubbles: true, cancelable: true, composed: true, view: window
+      }));
+    }
   }
   async function skip(request) {
     if (skippedSessions.has(request.session)) return;
     const token = ++skipToken;
-    const same = async () => {
+    const result = status => emit('skip-result', { session: request.session, requestId: request.requestId, status });
+    const same = () => {
       if (token !== skipToken || document.visibilityState !== 'visible') return false;
-      const current = await snapshot();
-      return token === skipToken && current?.session === request.session && current?.ip === request.ip;
+      if (currentPeer()?.session !== request.session) return false;
+      if (request.countryName !== undefined && countryName() !== request.countryName) return false;
+      return !request.ip || lastSnapshot?.session !== request.session || !lastSnapshot.selected || lastSnapshot.ip === request.ip;
     };
     try {
       // The deadline survives peer changes, settings changes and cancellation.
-      await sleep(Math.max(delay(), nextSkipAt - Date.now()));
-      if (!await same()) return emit('skip-result', { session: request.session, status: 'cancelled' });
-      const button = skipControl();
-      if (!button) return emit('skip-result', { session: request.session, status: 'unavailable' });
+      await sleep(Math.max(delay(1000, 2000), nextSkipAt - Date.now()));
+      if (!same()) return result('cancelled');
+      const button = skipControl('Skip');
+      let usedEscape = !button;
+      if (button) button.click();
+      else pressEscape();
+      await sleep(delay(1000, 2000));
+      if (!same()) return result('cancelled');
+      let confirm = skipControl('Really?');
+      if (button && !confirm && skipControl('Skip')) {
+        // The click did not advance the label. Start the two-Escape fallback.
+        usedEscape = true;
+        pressEscape();
+        await sleep(delay(1000, 2000));
+        if (!same()) return result('cancelled');
+        confirm = null;
+      }
       skippedSessions.add(request.session);
       if (skippedSessions.size > 200) skippedSessions.delete(skippedSessions.values().next().value);
-      nextSkipAt = Date.now() + delay();
-      button.click();
-      emit('skip-result', { session: request.session, status: 'clicked' });
-    } catch { emit('skip-result', { session: request.session, status: 'cancelled' }); }
+      nextSkipAt = Date.now() + delay(4000, 6000);
+      if (!usedEscape && confirm) confirm.click();
+      else { usedEscape = true; pressEscape(); }
+      result(usedEscape ? 'keyboard' : 'clicked');
+    } catch { result('cancelled'); }
   }
   function receive(event) {
     const message = event.data;
     if (!message || typeof message !== 'object') return;
-    if (message.kind === 'settings') { prefs = C.settings(message.data); skipToken++; }
+    if (message.kind === 'settings') {
+      const next = C.settings(message.data);
+      if (next.ipSkip !== prefs.ipSkip || next.countrySkip !== prefs.countrySkip) skipToken++;
+      prefs = next;
+    }
     if (message.kind === 'cancel') skipToken++;
-    if (message.kind === 'skip' && (prefs.ipSkip || prefs.countrySkip) && typeof message.data?.session === 'string' && C.ip(message.data?.ip)) void skip(message.data);
+    if (message.kind === 'skip' && (prefs.ipSkip || prefs.countrySkip) && typeof message.data?.session === 'string' && (C.ip(message.data?.ip) || typeof message.data?.countryName === 'string' && message.data.countryName.trim())) void skip(message.data);
   }
   function establish(event) {
     if (port || event.source !== window || event.origin !== location.origin || event.data?.type !== 'chromegle-port-v1' || event.ports?.length !== 1) return;
@@ -165,7 +206,7 @@
   window.addEventListener('message', establish);
   document.addEventListener('keydown', e => { if (e.isTrusted && e.key === 'Escape') { skipToken++; emit('manual', null); } }, true);
   document.addEventListener('pointerdown', e => {
-    if (e.isTrusted && e.target?.closest?.('button')) { skipToken++; emit('manual', null); }
+    if (e.isTrusted && e.target?.closest?.('button, .mainText, #skipButton, .skipButton')) { skipToken++; emit('manual', null); }
   }, true);
   document.addEventListener('visibilitychange', () => { if (document.hidden) skipToken++; });
   setInterval(async () => {
@@ -173,6 +214,7 @@
     busy = true;
     try {
       const current = await snapshot();
+      if (!current || current.selected || lastSnapshot?.session !== current.session) lastSnapshot = current;
       // Repeat snapshots so a late-starting isolated script can recover state.
       emit('connection', current);
     } catch { emit('connection', null); }

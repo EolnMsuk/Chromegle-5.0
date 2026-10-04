@@ -29,7 +29,7 @@
     text('country', current?.geo ? current.geo.country || '' : current?.geoStatus || 'Location appears after a selected connection is available.');
     text('locality', current?.geo ? [current.geo.state, current.geo.city].filter(Boolean).join(', ') : '');
     $('locality').hidden = !$('locality').textContent;
-    $('explanation').textContent = current?.type === 'relay' ? 'Location is the relay server. Country auto-skip is disabled for relay connections.' : '';
+    text('explanation', current?.type === 'relay' ? 'IP location is the relay server. Country auto-skip uses the country shown by Umingle.' : '');
     $('block').disabled = $('save').disabled = $('note').disabled = !current?.ip;
     $('retry').disabled = !current?.ip || !prefs.geoEnabled || !C.publicIP(current.ip);
     $('block').textContent = blocked.includes(current?.ip) ? 'Unblock IP' : 'Block IP';
