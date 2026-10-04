@@ -64,4 +64,4 @@ The tests run the bridge and content scripts together with simulated WebRTC, DOM
 
 [Chrome sidePanel API](https://developer.chrome.com/docs/extensions/reference/api/sidePanel), [content-script execution worlds](https://developer.chrome.com/docs/extensions/develop/concepts/content-scripts), [MessageChannel and port transfer](https://developer.mozilla.org/en-US/docs/Web/API/Channel_Messaging_API), [event isTrusted](https://developer.mozilla.org/en-US/docs/Web/API/Event/isTrusted), [Function.toString](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/toString), [WebRTC statistics](https://www.w3.org/TR/webrtc-stats/).
 
-The inherited LICENSE is retained. The upstream README named GPL-3.0 while its LICENSE contains CC0; this inconsistency remains recorded. Bundled Noto Color Emoji uses the SIL Open Font License in `assets/FONT-LICENSE.txt`. Legacy project authors: EolnMsuk, xanzinfl, flouflouit and Isaac Kogan.
+[Venmo](https://venmo.com/u/rustonrails) | Bitcoin: `31uHLpioo1TbxAmo9kM7rrKcLz3wvcoZaL`
