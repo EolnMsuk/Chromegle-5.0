@@ -13,7 +13,7 @@
   const send = (kind, data) => channel.port1.postMessage({ kind, data });
   // Notes, block lists and geolocation never travel into MAIN.
   function configure() {
-    send('settings', { ipSkip: prefs.ipSkip, countrySkip: prefs.countrySkip });
+    send('settings', { ipSkip: prefs.ipSkip, countrySkip: prefs.countrySkip, facePresenceOverride: prefs.facePresenceOverride });
   }
   const state = () => ({ current, status, connected, active });
   function publish() { chrome.runtime.sendMessage({ action: 'state', state: state() }).catch(() => {}); }

@@ -1,4 +1,4 @@
-/* MAIN world: observes native APIs. No signaling messages are sent or suppressed. */
+/* MAIN world: WebRTC observation and an opt-in face-presence worker result override. */
 (() => {
   'use strict';
   // This file is self-contained: no extension objects are installed on window.
@@ -12,7 +12,7 @@
     },
     iceType(value) { return ['host','srflx','prflx','relay'].includes(value) ? value : 'unknown'; },
     settings(raw = {}) {
-      return { ipSkip: raw?.ipSkip !== false, countrySkip: raw?.countrySkip === true };
+      return { ipSkip: raw?.ipSkip !== false, countrySkip: raw?.countrySkip === true, facePresenceOverride: raw?.facePresenceOverride === true };
     },
     candidate(line) {
       if (typeof line !== 'string') return null;
@@ -123,6 +123,47 @@
       const pc = Reflect.construct(target, args, newTarget);
       try { observe(pc); } catch { /* Return the real PC even if instrumentation fails. */ }
       return pc;
+    }});
+  }
+  // sourcecode.txt: Umingle posts {action: 'detectFaces', job_id, imageData}
+  // to /static/vision.js. Its handler accepts f_res only when k equals
+  // Math.imul(job_id * 10 + 1, 837921547) >>> 0, then sets lastFace and
+  // sends faceShowing through its own findPeer message. No socket hook needed.
+  function observeFaceWorker(worker) {
+    let jobId = null;
+    const post = worker.postMessage;
+    Object.defineProperty(worker, 'postMessage', {
+      configurable: true, writable: true, value: new Proxy(post, {
+        apply(target, receiver, args) {
+          const result = Reflect.apply(target, receiver, args);
+          // Preserve native receiver checks, structured cloning, transfer and errors.
+          if (receiver === worker && args[0]?.action === 'detectFaces') {
+            jobId = Number.isSafeInteger(args[0].job_id) && args[0].job_id >= 0 ? args[0].job_id : null;
+          }
+          return result;
+        }
+      })
+    });
+    // Registered before the page assigns onmessage or adds any listeners.
+    worker.addEventListener('message', event => {
+      if (!prefs.facePresenceOverride || jobId === null) return;
+      const data = event.data;
+      if (!data || !['f_res', 'faceDetections'].includes(data.action)) return;
+      try {
+        Object.defineProperty(event, 'data', { configurable: true, value: {
+          ...data, action: 'f_res', k: Math.imul(jobId * 10 + 1, 837921547) >>> 0
+        } });
+      } catch { /* Unknown/unmodifiable event: leave the native result intact. */ }
+    }, true);
+  }
+  if (window.Worker) {
+    replaceConstructor('Worker', window.Worker, { construct(target, args, newTarget) {
+      const worker = Reflect.construct(target, args, newTarget);
+      try {
+        const url = new URL(args[0], document.baseURI || location.origin);
+        if (url.origin === location.origin && url.pathname === '/static/vision.js') observeFaceWorker(worker);
+      } catch { /* Unrecognized worker: preserve native behavior. */ }
+      return worker;
     }});
   }
   function skipControl(label) {
