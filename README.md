@@ -68,22 +68,6 @@ Encounter counts, notes and block lists are stored locally. Each normalized IP i
 
 The existing provider is `https://m52o1m3c29.execute-api.eu-central-1.amazonaws.com/prod/geoip2?ip_address=...`.
 
-## Validation
+## Support Developer
 
-Run the behavioral regression tests with Node.js:
-
-```text
-node --test tests/*.test.cjs
-```
-
-The tests run the bridge and content scripts together with simulated WebRTC, DOM controls, extension messaging and a deterministic clock. They cover both random timing boundaries, the two-click sequence, cooldown across peer changes, transient stats failures, site country filtering, cancellation, stale request results, automatic geo retry/backoff, unchanged display data, stale geo results, and persistent encounter counting. These tests do not contact live chats or external geolocation services.
-
-Face-detection tests cover the decoded acceptance expression, both known worker response formats, startup and saved preference changes, disabling on existing workers, exact worker URL selection, native transfer arguments/errors, unrelated messages, malformed jobs, and compatibility with auto-skip.
-
-Report-detection tests cover default-off and saved preferences, passive listener attachment, unchanged socket methods and payloads, both event orders and the five-second window, ignored acknowledgments and unrelated events, malformed/binary/synthetic messages, alert expiry, cooldown, disabling, reconnections and URL scoping. These verify implementation behavior, not the heuristic's accuracy on live reports.
-
-## References and license
-
-[Chrome sidePanel API](https://developer.chrome.com/docs/extensions/reference/api/sidePanel), [content-script execution worlds](https://developer.chrome.com/docs/extensions/develop/concepts/content-scripts), [MessageChannel and port transfer](https://developer.mozilla.org/en-US/docs/Web/API/Channel_Messaging_API), [event isTrusted](https://developer.mozilla.org/en-US/docs/Web/API/Event/isTrusted), [Function.toString](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/toString), [WebRTC statistics](https://www.w3.org/TR/webrtc-stats/).
-
-The inherited LICENSE is retained. The upstream README named GPL-3.0 while its LICENSE contains CC0; this inconsistency remains recorded. Bundled Noto Color Emoji uses the SIL Open Font License in `assets/FONT-LICENSE.txt`. Legacy project authors: EolnMsuk, xanzinfl, flouflouit and Isaac Kogan.
+[Venmo](https://venmo.com/u/rustonrails) | Bitcoin: `31uHLpioo1TbxAmo9kM7rrKcLz3wvcoZaL`
