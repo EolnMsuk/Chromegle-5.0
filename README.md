@@ -9,7 +9,7 @@ A Manifest V3 extension for Chromium/Edge 116+ on `https://umingle.com` and `htt
 3. The native browser sidebar opens on your first click or keypress in Umingle. Chrome requires a user gesture, so it cannot open immediately on page load. The extension toolbar icon also opens it. If you close it, it stays closed for the rest of that page visit.
 4. Use Settings for preferences, blocked IPs and saved notes.
 
-No build step, API key or account is required. Existing notes and block lists keep their storage keys. Removed face/report and older hide/crop settings are ignored.
+No build step, API key or account is required. Existing notes and block lists keep their storage keys. Legacy face/report and older hide/crop settings are ignored; the new face-presence preference starts disabled.
 
 ## Connection display
 
@@ -35,30 +35,24 @@ Real Escape presses, manual control interaction, note editing, visibility change
 
 ## Sidebar and storage
 
-The compact header reads **Chromegle 6.0**. Face Detection/face bypass and Report Detection/signal alerts have been removed, including Worker and WebSocket interception.
+The compact header reads **Chromegle 6.0**. Face Detection is available in Settings. Report Detection/signal alerts remain removed; WebSocket traffic is not intercepted.
 
 `sidebar.js` requests the native browser side panel on the first trusted click or keypress, without adding any UI to the page. A successful open removes the gesture listeners so manually closing the sidebar is respected. If the browser rejects opening, a later gesture can retry. The sidebar follows the active tab and keeps its styles and flag font inside the extension document.
 
 Encounter counts, notes and block lists are stored locally. Each normalized IP is counted once per connection session, even when ICE details change or the panel is reopened. Counts include the current encounter, begin when this feature is installed, and have no expiry; they survive browser restarts and extension updates. Removing the extension or clearing its storage removes these counts. The unlimitedStorage permission avoids the normal local-storage quota for the growing history. Notes are plain text keyed by normalized IP; empty notes delete the entry. Unsaved drafts survive same-IP reconnections. Editing a note pauses auto-skip for that connection.
 
+## Face Detection
+
+Open Settings, enable **Face Detection → Report face present**, and click **Save settings**. Disable it and save to restore normal detection. Changes apply to the next detector result in open Umingle tabs. After updating the extension, reload existing Umingle tabs once to install the new hook.
+
 ## Architecture
 
-- `bridge.js` observes WebRTC in MAIN through constructor/method proxies while preserving native prototypes, descriptors and return values. It sends observations and validated skip results over a MessageChannel.
+- `bridge.js` observes WebRTC in MAIN through constructor/method proxies while preserving native prototypes, descriptors and return values. It also hooks the known face worker at document start so the optional face-presence override can be toggled without reloading. It sends observations and validated skip results over a MessageChannel.
 - `content.js` holds filter and connection state in the isolated world. It transfers the port in one same-window, same-origin startup message. This handoff and the hooks remain observable and are not authentication against a hostile page. Notes, geo, country lists and block lists are never sent into MAIN.
 - `background.js` validates senders, routes panels by tab, serializes storage writes and performs fixed-endpoint geolocation. The provider receives only the selected public IP, with credentials omitted. Results are cached for 30 minutes (up to 200 entries), with a six-second timeout and a one-second request interval. Disable geolocation to stop lookups.
 - `manifest.json` uses the native side panel with no web-accessible resources or in-page panel. UI uses locally packaged scripts with MV3 CSP. The extension requests `storage`, `unlimitedStorage`, `sidePanel`, and the existing geolocation host permission.
 
 The existing provider is `https://m52o1m3c29.execute-api.eu-central-1.amazonaws.com/prod/geoip2?ip_address=...`.
-
-## Validation
-
-Run the behavioral regression tests with Node.js:
-
-```text
-node --test tests/*.test.cjs
-```
-
-The tests run the bridge and content scripts together with simulated WebRTC, DOM controls, extension messaging and a deterministic clock. They cover both random timing boundaries, the two-click sequence, cooldown across peer changes, transient stats failures, site country filtering, cancellation, stale request results, automatic geo retry/backoff, unchanged display data, stale geo results, and persistent encounter counting. These tests do not contact live chats or external geolocation services.
 
 ## Donate
 
