@@ -20,6 +20,10 @@
         <label class="toggle"><input type="checkbox" id="facePresenceOverride" aria-describedby="faceDetectionHelp"> Report face present</label>
         <p class="help" id="faceDetectionHelp">Allow matching without keeping your face in frame. Off by default. After saving, applies to the next face check in open Umingle tabs. Your camera feed stays unchanged; a blank or covered camera may still be rejected.</p>
       </section>
+      <section><h2>Report Detection</h2>
+        <label class="toggle"><input type="checkbox" id="detectReports" aria-describedby="reportDetectionHelp"> Detect Reports (Beta)</label>
+        <p class="help" id="reportDetectionHelp">Off by default. Shows a red possible-report alert when camera and page snapshot requests arrive together. This is an unverified guess: routine moderation may trigger it, and reports may be missed. Passively observes received messages; sends no requests and changes no site messages or controls.</p>
+      </section>
       <div class="savebar"><button type="submit">Save settings</button><span id="status" role="status" aria-live="polite"></span></div>
     </form>
     <section><h2>Blocked IPs</h2><form id="addBlock" class="row"><input id="newIP" placeholder="IPv4 or IPv6 address" aria-label="IP address to block" required><button type="submit">Block IP</button></form><div id="blockedList"></div></section>

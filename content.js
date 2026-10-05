@@ -7,15 +7,16 @@
   let status = '', active = false, statusBeforeGap = '';
   let geoTimer = null, geoFailures = 0, requestSequence = 0, pendingRequest = null, pausedSession = '';
   let pendingReason = '';
+  let reportAlert = null, reportTimer = null, reportWatching = false;
   const locating = new WeakSet();
   const encounters = new Map();
   const channel = new MessageChannel();
   const send = (kind, data) => channel.port1.postMessage({ kind, data });
   // Notes, block lists and geolocation never travel into MAIN.
   function configure() {
-    send('settings', { ipSkip: prefs.ipSkip, countrySkip: prefs.countrySkip, facePresenceOverride: prefs.facePresenceOverride });
+    send('settings', { ipSkip: prefs.ipSkip, countrySkip: prefs.countrySkip, facePresenceOverride: prefs.facePresenceOverride, detectReports: prefs.detectReports });
   }
-  const state = () => ({ current, status, connected, active });
+  const state = () => ({ current, status, connected, active, reportAlert, reportWatching });
   function publish() { chrome.runtime.sendMessage({ action: 'state', state: state() }).catch(() => {}); }
   async function call(message) {
     const result = await chrome.runtime.sendMessage(message);
@@ -139,6 +140,13 @@
     if (!message || typeof message !== 'object') return;
     if (message.kind === 'ready') { connected = true; if (ready) configure(); publish(); schedule(); }
     if (message.kind === 'connection') connection(message.data);
+    if (message.kind === 'report-observer') {
+      reportWatching = prefs.detectReports && message.data?.watching === true; publish();
+    }
+    if (message.kind === 'report-hint' && ready && prefs.detectReports && message.data?.reason === 'paired-capture-requests') {
+      reportAlert = { at: Date.now() }; clearTimeout(reportTimer); publish();
+      reportTimer = setTimeout(() => { reportAlert = null; reportTimer = null; publish(); }, 30000);
+    }
     if (message.kind === 'manual' && current) { pendingRequest = null; pendingReason = ''; pausedSession = current.session; attempted = current.key; status = 'Auto-skip cancelled by manual interaction.'; publish(); }
     if (message.kind === 'skip-result' && message.data?.session === current?.session && message.data.requestId === pendingRequest) {
       pendingRequest = null;
@@ -171,6 +179,9 @@
       const next = C.settings(changes.settings.newValue);
       const filtersChanged = next.ipSkip !== prefs.ipSkip || next.countrySkip !== prefs.countrySkip || JSON.stringify(next.countries) !== JSON.stringify(prefs.countries);
       prefs = next; configure();
+      if (!prefs.detectReports) {
+        clearTimeout(reportTimer); reportTimer = null; reportAlert = null; reportWatching = false;
+      }
       if (filtersChanged) { cancelSkip(); pausedSession = ''; }
       if (current && geoWasEnabled !== prefs.geoEnabled) {
         geoVersion++; clearTimeout(geoTimer); geoTimer = null;

@@ -13,6 +13,7 @@ header{padding:10px 14px}header p{font-size:11px;margin-top:4px}main{padding:12p
 #connectionView button{background:var(--connection-accent);border-color:var(--connection-accent);color:#102b42}
 #connectionView button:hover{background:#b5dfff}
 #seenCount{margin:16px 0 6px}
+#reportAlert{color:#ff8585;font-weight:600;font-size:14px;line-height:1.5;margin-bottom:12px}
 #seenCount + .ip{margin-top:6px}
 .project-links{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-bottom:16px}
 .project-links a{color:var(--connection-accent);font-size:13px;font-weight:600;text-decoration:underline;text-underline-offset:3px}

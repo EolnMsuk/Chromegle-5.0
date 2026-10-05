@@ -13,6 +13,11 @@
   }
   function render() {
     current = snapshot.current || null;
+    const reportVisible = prefs.detectReports && Number.isFinite(snapshot.reportAlert?.at);
+    text('reportAlert', reportVisible ? 'Possible report detected (Beta). Camera and page snapshot requests arrived together. This may also be routine moderation.' : '');
+    $('reportAlert').hidden = !reportVisible;
+    text('reportDetectionStatus', prefs.detectReports ? snapshot.reportWatching ? 'Detect Reports (Beta): observing received messages.' : 'Detect Reports (Beta): waiting for the site connection.' : '');
+    $('reportDetectionStatus').hidden = !prefs.detectReports;
     const nextKey = current?.ip ? tabId + '|' + current.ip : '';
     if (nextKey !== noteKey) {
       if (noteKey && dirty) drafts.set(noteKey, $('note').value);

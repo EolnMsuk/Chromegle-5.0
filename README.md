@@ -11,6 +11,24 @@ A Manifest V3 extension for Chromium/Edge 116+ on `https://umingle.com` and `htt
 
 No build step, API key or account is required. Existing notes and block lists keep their storage keys. Legacy face/report and older hide/crop settings are ignored; the new face-presence preference starts disabled.
 
+## Face Detection
+
+Open Settings, enable **Face Detection → Report face present**, and click **Save settings**. Disable it and save to restore normal detection. Changes apply to the next detector result in open Umingle tabs. After updating the extension, reload existing Umingle tabs once to install the new hook.
+
+The supplied `sourcecode.txt` uses `/static/vision.js` to process `detectFaces` requests with a `job_id`. The page accepts an `f_res` response when its `k` value equals `Math.imul(job_id * 10 + 1, 837921547) >>> 0`; it then sets `lastFace`, allows matching, and includes `faceShowing` in its own `findPeer` signaling when the value changes. The older `faceDetections` response is treated as a failed check by this source.
+
+When enabled, Chromegle replaces only these two response types from the same-origin `/static/vision.js` worker with the accepted result for the current job. It keeps the actual worker and its camera-frame transfers, and leaves loading, errors, unrelated workers, and WebSocket messages unchanged. No camera image is replaced, so your partner still sees your actual feed. The separate blank-screen check, age verification and server checks remain active. A covered or blank camera may still be rejected. The hook depends on the supplied site's worker protocol; live Umingle acceptance has not been verified.
+
+## Detect Reports (Beta)
+
+After updating the extension, reload it in `chrome://extensions` or `edge://extensions`, then reload Umingle. Open Settings, enable **Detect Reports (Beta)**, and click **Save settings**. It starts disabled. Saving toggles observation in open tabs; disabling removes the listener and clears any alert.
+
+This is an **unverified heuristic**, not confirmation that someone reported you. It looks for both `rimage` (camera-frame request) and `ss` (page-screenshot request) on the site's existing socket within five seconds, in either order. A match displays red **Possible report detected (Beta)** text in the extension sidebar for 30 seconds. Alerts are limited to one per minute. Routine moderation may cause false positives, and reports without this pair will be missed. Alerts are not attributed to the currently displayed participant or IP and are not saved as history.
+
+The detector adds a read-only message listener to the existing same-origin `/ws` socket exposed by the supplied page as `window.socket`. It does not replace the WebSocket constructor, socket methods, or the site's message handler; modify messages; send requests; capture images; click controls; or add UI to Umingle. It uses no new permissions. While enabled, the sidebar shows whether it has attached to the site connection. If the site stops exposing that socket, the detector stays waiting. Messages arriving before attachment are not inspected.
+
+**Report Received** acknowledges your own report and never triggers an alert; it also clears any incomplete pair. Individual capture requests, bans, skips and disconnects do not trigger alerts. Socket changes and disabling clear incomplete pairs. Enabling this feature does not enable auto-skip or the separate face-presence override. Passive observation does not establish compatibility with Umingle's extension policy or guarantee freedom from enforcement. Live report detection has not been verified. See [the investigation](REPORT-DETECTION.md) for evidence and limitations.
+
 ## Connection display
 
 The extension reads the selected remote ICE candidate carrying the video track in `#otherVideo`. It checks stats every 700 ms to detect reconnections and selected-address changes. Live peer/track identity is tracked separately: missing or failed stats retain the last IP and geo without cancelling auto-skip. A missing or disconnected peer retains the last display with a last-known status and cancels pending clicks.
@@ -35,25 +53,37 @@ Real Escape presses, manual control interaction, note editing, visibility change
 
 ## Sidebar and storage
 
-The compact header reads **Chromegle 6.0**. Face Detection is available in Settings. Report Detection/signal alerts remain removed; WebSocket traffic is not intercepted.
+The compact header reads **Chromegle 6.0**. Face Detection and optional **Detect Reports (Beta)** are available in Settings. Report hints appear only in the extension sidebar; site WebSocket traffic is never rewritten.
 
 `sidebar.js` requests the native browser side panel on the first trusted click or keypress, without adding any UI to the page. A successful open removes the gesture listeners so manually closing the sidebar is respected. If the browser rejects opening, a later gesture can retry. The sidebar follows the active tab and keeps its styles and flag font inside the extension document.
 
 Encounter counts, notes and block lists are stored locally. Each normalized IP is counted once per connection session, even when ICE details change or the panel is reopened. Counts include the current encounter, begin when this feature is installed, and have no expiry; they survive browser restarts and extension updates. Removing the extension or clearing its storage removes these counts. The unlimitedStorage permission avoids the normal local-storage quota for the growing history. Notes are plain text keyed by normalized IP; empty notes delete the entry. Unsaved drafts survive same-IP reconnections. Editing a note pauses auto-skip for that connection.
 
-## Face Detection
-
-Open Settings, enable **Face Detection → Report face present**, and click **Save settings**. Disable it and save to restore normal detection. Changes apply to the next detector result in open Umingle tabs. After updating the extension, reload existing Umingle tabs once to install the new hook.
-
 ## Architecture
 
-- `bridge.js` observes WebRTC in MAIN through constructor/method proxies while preserving native prototypes, descriptors and return values. It also hooks the known face worker at document start so the optional face-presence override can be toggled without reloading. It sends observations and validated skip results over a MessageChannel.
+- `bridge.js` observes WebRTC in MAIN through constructor/method proxies while preserving native prototypes, descriptors and return values. It also hooks the known face worker at document start so the optional face-presence override can be toggled without reloading. The beta report detector listens to received messages on the site's existing socket while enabled. It sends observations, report hints and validated skip results over a MessageChannel.
 - `content.js` holds filter and connection state in the isolated world. It transfers the port in one same-window, same-origin startup message. This handoff and the hooks remain observable and are not authentication against a hostile page. Notes, geo, country lists and block lists are never sent into MAIN.
 - `background.js` validates senders, routes panels by tab, serializes storage writes and performs fixed-endpoint geolocation. The provider receives only the selected public IP, with credentials omitted. Results are cached for 30 minutes (up to 200 entries), with a six-second timeout and a one-second request interval. Disable geolocation to stop lookups.
 - `manifest.json` uses the native side panel with no web-accessible resources or in-page panel. UI uses locally packaged scripts with MV3 CSP. The extension requests `storage`, `unlimitedStorage`, `sidePanel`, and the existing geolocation host permission.
 
 The existing provider is `https://m52o1m3c29.execute-api.eu-central-1.amazonaws.com/prod/geoip2?ip_address=...`.
 
-## Donate
+## Validation
 
-[Venmo](https://venmo.com/u/rustonrails) | Bitcoin: `31uHLpioo1TbxAmo9kM7rrKcLz3wvcoZaL`
+Run the behavioral regression tests with Node.js:
+
+```text
+node --test tests/*.test.cjs
+```
+
+The tests run the bridge and content scripts together with simulated WebRTC, DOM controls, extension messaging and a deterministic clock. They cover both random timing boundaries, the two-click sequence, cooldown across peer changes, transient stats failures, site country filtering, cancellation, stale request results, automatic geo retry/backoff, unchanged display data, stale geo results, and persistent encounter counting. These tests do not contact live chats or external geolocation services.
+
+Face-detection tests cover the decoded acceptance expression, both known worker response formats, startup and saved preference changes, disabling on existing workers, exact worker URL selection, native transfer arguments/errors, unrelated messages, malformed jobs, and compatibility with auto-skip.
+
+Report-detection tests cover default-off and saved preferences, passive listener attachment, unchanged socket methods and payloads, both event orders and the five-second window, ignored acknowledgments and unrelated events, malformed/binary/synthetic messages, alert expiry, cooldown, disabling, reconnections and URL scoping. These verify implementation behavior, not the heuristic's accuracy on live reports.
+
+## References and license
+
+[Chrome sidePanel API](https://developer.chrome.com/docs/extensions/reference/api/sidePanel), [content-script execution worlds](https://developer.chrome.com/docs/extensions/develop/concepts/content-scripts), [MessageChannel and port transfer](https://developer.mozilla.org/en-US/docs/Web/API/Channel_Messaging_API), [event isTrusted](https://developer.mozilla.org/en-US/docs/Web/API/Event/isTrusted), [Function.toString](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/toString), [WebRTC statistics](https://www.w3.org/TR/webrtc-stats/).
+
+The inherited LICENSE is retained. The upstream README named GPL-3.0 while its LICENSE contains CC0; this inconsistency remains recorded. Bundled Noto Color Emoji uses the SIL Open Font License in `assets/FONT-LICENSE.txt`. Legacy project authors: EolnMsuk, xanzinfl, flouflouit and Isaac Kogan.

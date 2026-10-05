@@ -1,4 +1,4 @@
-/* MAIN world: WebRTC observation and an opt-in face-presence worker result override. */
+/* MAIN world: WebRTC observation, passive report hints and an opt-in face worker override. */
 (() => {
   'use strict';
   // This file is self-contained: no extension objects are installed on window.
@@ -12,7 +12,7 @@
     },
     iceType(value) { return ['host','srflx','prflx','relay'].includes(value) ? value : 'unknown'; },
     settings(raw = {}) {
-      return { ipSkip: raw?.ipSkip !== false, countrySkip: raw?.countrySkip === true, facePresenceOverride: raw?.facePresenceOverride === true };
+      return { ipSkip: raw?.ipSkip !== false, countrySkip: raw?.countrySkip === true, facePresenceOverride: raw?.facePresenceOverride === true, detectReports: raw?.detectReports === true };
     },
     candidate(line) {
       if (typeof line !== 'string') return null;
@@ -33,6 +33,49 @@
   let lastSnapshot = null;
   const skippedSessions = new Set();
   const emit = (kind, data) => { try { port?.postMessage({ kind, data }); } catch { /* Navigating away. */ } };
+  // Beta heuristic, not a confirmed report protocol. The supplied page exposes
+  // its own socket as window.socket. Never replace WebSocket, send, onmessage,
+  // or message data; only listen while enabled. No probes or host DOM writes.
+  let reportSocket = null, reportImageAt = null, reportScreenshotAt = null;
+  let nextReportAt = 0;
+  const resetReportPair = () => { reportImageAt = null; reportScreenshotAt = null; };
+  function reportMessage(event) {
+    if (!prefs.detectReports || event.currentTarget !== reportSocket || window.socket !== reportSocket || event.isTrusted !== true) return;
+    if (typeof event.data !== 'string' || event.data.length > 16384) return;
+    let message;
+    try { message = JSON.parse(event.data); } catch { return; }
+    if (!message || typeof message !== 'object' || Array.isArray(message)) return;
+    // This acknowledges the local user's outgoing report, not a report against
+    // them. Drop any partial pair too, to avoid correlating across that action.
+    if (message.event === 'serverMessage' && typeof message.message === 'string' && /report received/i.test(message.message)) {
+      resetReportPair(); return;
+    }
+    if (!['rimage', 'ss'].includes(message.event)) return;
+    const now = Date.now();
+    if (now < nextReportAt) return;
+    if (message.event === 'rimage') reportImageAt = now;
+    else reportScreenshotAt = now;
+    if (reportImageAt === null || reportScreenshotAt === null || Math.abs(reportImageAt - reportScreenshotAt) > 5000) return;
+    resetReportPair(); nextReportAt = now + 60000;
+    emit('report-hint', { reason: 'paired-capture-requests' });
+  }
+  function observeReportSocket() {
+    let socket = null;
+    if (prefs.detectReports) {
+      try {
+        const candidate = window.socket;
+        if (window.WebSocket && candidate instanceof window.WebSocket && candidate.readyState === window.WebSocket.OPEN) {
+          const url = new URL(candidate.url);
+          if (url.protocol === 'wss:' && url.origin === location.origin.replace(/^https:/, 'wss:') && url.pathname === '/ws') socket = candidate;
+        }
+      } catch { /* Site socket unavailable; do not create one. */ }
+    }
+    if (socket === reportSocket) return;
+    reportSocket?.removeEventListener('message', reportMessage);
+    reportSocket = socket; resetReportPair();
+    reportSocket?.addEventListener('message', reportMessage);
+    emit('report-observer', { watching: Boolean(reportSocket) });
+  }
   const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
   const delay = (min, max) => min + Math.floor(crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296 * (max - min + 1));
   const countryName = () => (document.querySelector('#countryName')?.textContent || '').trim().slice(0, 160);
@@ -230,6 +273,7 @@
       const next = C.settings(message.data);
       if (next.ipSkip !== prefs.ipSkip || next.countrySkip !== prefs.countrySkip) skipToken++;
       prefs = next;
+      observeReportSocket();
     }
     if (message.kind === 'cancel') skipToken++;
     if (message.kind === 'skip' && (prefs.ipSkip || prefs.countrySkip) && typeof message.data?.session === 'string' && (C.ip(message.data?.ip) || typeof message.data?.countryName === 'string' && message.data.countryName.trim())) void skip(message.data);
@@ -251,6 +295,7 @@
   }, true);
   document.addEventListener('visibilitychange', () => { if (document.hidden) skipToken++; });
   setInterval(async () => {
+    observeReportSocket();
     if (busy) return;
     busy = true;
     try {
