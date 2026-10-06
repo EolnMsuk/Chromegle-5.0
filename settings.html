@@ -14,11 +14,15 @@
         <input type="text" id="countries" placeholder="e.g. US, GB, FR" autocomplete="off">
         <p class="help">Two-letter country codes, separated by commas or spaces. Country skipping uses the country shown by Umingle, even when IP location lookup is off or the connection uses a relay. No countries are blocked by default.</p>
         <details><summary>Find a country code</summary><input id="countrySearch" type="search" placeholder="Search country or code" aria-label="Search country codes"><div id="countryList"></div></details>
-        <p class="help">Auto-skip clicks Skip, waits a random 1-2 seconds, then clicks Really? for the same visible connection. If the controls cannot be found, it tries Escape with the same timing. A random 4-6 second cooldown follows the final action.</p>
+        <p class="help">Auto-skip waits a random 0.1-1.5 seconds after detecting a blocked country or IP, clicks Skip, waits a random 0.1-0.5 seconds, then clicks Really? for the same visible connection. If the controls cannot be found, it tries Escape with the same timing. A random 2.0-3.5 second cooldown follows the final action.</p>
       </section>
       <section><h2>Face Detection</h2>
         <label class="toggle"><input type="checkbox" id="facePresenceOverride" aria-describedby="faceDetectionHelp"> Report face present</label>
         <p class="help" id="faceDetectionHelp">Allow matching without keeping your face in frame. Off by default. After saving, applies to the next face check in open Umingle tabs. Your camera feed stays unchanged; a blank or covered camera may still be rejected.</p>
+      </section>
+      <section><h2>Black-screen media</h2>
+        <label class="toggle"><input type="checkbox" id="restoreBlackScreen" aria-describedby="blackScreenHelp"> Restore black-screen media</label>
+        <p class="help" id="blackScreenHelp">Off by default. Restore already-received video and audio when Umingle has cleared and blackened the remote player. Sends no requests; changes local playback only. Cannot recover media the other person is not sending. Your mute and volume settings remain in effect. If playback is blocked, click inside Umingle or press a key. Disabling restores the hidden player while Chromegle still owns its stream.</p>
       </section>
       <section><h2>Report Detection</h2>
         <label class="toggle"><input type="checkbox" id="detectReports" aria-describedby="reportDetectionHelp"> Detect Reports (Beta)</label>

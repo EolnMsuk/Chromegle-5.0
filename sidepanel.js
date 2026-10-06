@@ -18,6 +18,16 @@
     $('reportAlert').hidden = !reportVisible;
     text('reportDetectionStatus', prefs.detectReports ? snapshot.reportWatching ? 'Detect Reports (Beta): observing received messages.' : 'Detect Reports (Beta): waiting for the site connection.' : '');
     $('reportDetectionStatus').hidden = !prefs.detectReports;
+    const mediaText = {
+      attached: 'Black-screen media: received tracks attached; starting playback.',
+      restored: 'Black-screen media: local playback restored. Only received media can play.',
+      'playback-blocked': 'Black-screen media: click inside Umingle or press a key to allow playback.',
+      'playback-error': 'Black-screen media: playback failed. Click inside Umingle to retry.',
+      unavailable: 'Black-screen media: restoration unavailable on this page.'
+    };
+    text('mediaRecoveryStatus', prefs.restoreBlackScreen ? mediaText[snapshot.mediaRecoveryStatus] || 'Black-screen media: waiting for a hidden player and one connected video peer.' : '');
+    $('mediaRecoveryStatus').hidden = !prefs.restoreBlackScreen;
+    $('mediaRecoveryStatus').className = prefs.restoreBlackScreen && snapshot.mediaRecoveryStatus === 'restored' ? 'help media-restored' : 'help';
     const nextKey = current?.ip ? tabId + '|' + current.ip : '';
     if (nextKey !== noteKey) {
       if (noteKey && dirty) drafts.set(noteKey, $('note').value);

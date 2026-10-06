@@ -8,15 +8,16 @@
   let geoTimer = null, geoFailures = 0, requestSequence = 0, pendingRequest = null, pausedSession = '';
   let pendingReason = '';
   let reportAlert = null, reportTimer = null, reportWatching = false;
+  let mediaRecoveryStatus = 'disabled';
   const locating = new WeakSet();
   const encounters = new Map();
   const channel = new MessageChannel();
   const send = (kind, data) => channel.port1.postMessage({ kind, data });
   // Notes, block lists and geolocation never travel into MAIN.
   function configure() {
-    send('settings', { ipSkip: prefs.ipSkip, countrySkip: prefs.countrySkip, facePresenceOverride: prefs.facePresenceOverride, detectReports: prefs.detectReports });
+    send('settings', { ipSkip: prefs.ipSkip, countrySkip: prefs.countrySkip, facePresenceOverride: prefs.facePresenceOverride, detectReports: prefs.detectReports, restoreBlackScreen: prefs.restoreBlackScreen });
   }
-  const state = () => ({ current, status, connected, active, reportAlert, reportWatching });
+  const state = () => ({ current, status, connected, active, reportAlert, reportWatching, mediaRecoveryStatus });
   function publish() { chrome.runtime.sendMessage({ action: 'state', state: state() }).catch(() => {}); }
   async function call(message) {
     const result = await chrome.runtime.sendMessage(message);
@@ -140,6 +141,9 @@
     if (!message || typeof message !== 'object') return;
     if (message.kind === 'ready') { connected = true; if (ready) configure(); publish(); schedule(); }
     if (message.kind === 'connection') connection(message.data);
+    if (message.kind === 'media-recovery' && ['disabled','waiting','attached','restored','playback-blocked','playback-error','unavailable'].includes(message.data?.status)) {
+      mediaRecoveryStatus = prefs.restoreBlackScreen ? message.data.status : 'disabled'; publish();
+    }
     if (message.kind === 'report-observer') {
       reportWatching = prefs.detectReports && message.data?.watching === true; publish();
     }
@@ -152,7 +156,7 @@
       pendingRequest = null;
       pendingReason = '';
       if (message.data.status === 'cancelled') attempted = '';
-      status = ({ clicked: 'Skip and Really? clicked. Cooling down for 4–6 seconds.', keyboard: 'Skip attempted using Escape fallback. Cooling down for 4–6 seconds.', cancelled: 'Auto-skip paused until the same connection is visible again.' })[message.data.status] || 'Skip result unavailable.';
+      status = ({ clicked: 'Skip and Really? clicked. Cooling down for 2.0-3.5 seconds.', keyboard: 'Skip attempted using Escape fallback. Cooling down for 2.0-3.5 seconds.', cancelled: 'Auto-skip paused until the same connection is visible again.' })[message.data.status] || 'Skip result unavailable.';
       publish();
     }
   };
@@ -179,6 +183,7 @@
       const next = C.settings(changes.settings.newValue);
       const filtersChanged = next.ipSkip !== prefs.ipSkip || next.countrySkip !== prefs.countrySkip || JSON.stringify(next.countries) !== JSON.stringify(prefs.countries);
       prefs = next; configure();
+      if (!prefs.restoreBlackScreen) mediaRecoveryStatus = 'disabled';
       if (!prefs.detectReports) {
         clearTimeout(reportTimer); reportTimer = null; reportAlert = null; reportWatching = false;
       }

@@ -1,4 +1,4 @@
-/* MAIN world: WebRTC observation, passive report hints and an opt-in face worker override. */
+/* MAIN world: WebRTC observation and opt-in local media/face-worker features. */
 (() => {
   'use strict';
   // This file is self-contained: no extension objects are installed on window.
@@ -12,7 +12,7 @@
     },
     iceType(value) { return ['host','srflx','prflx','relay'].includes(value) ? value : 'unknown'; },
     settings(raw = {}) {
-      return { ipSkip: raw?.ipSkip !== false, countrySkip: raw?.countrySkip === true, facePresenceOverride: raw?.facePresenceOverride === true, detectReports: raw?.detectReports === true };
+      return { ipSkip: raw?.ipSkip !== false, countrySkip: raw?.countrySkip === true, facePresenceOverride: raw?.facePresenceOverride === true, detectReports: raw?.detectReports === true, restoreBlackScreen: raw?.restoreBlackScreen === true };
     },
     candidate(line) {
       if (typeof line !== 'string') return null;
@@ -33,6 +33,73 @@
   let lastSnapshot = null;
   const skippedSessions = new Set();
   const emit = (kind, data) => { try { port?.postMessage({ kind, data }); } catch { /* Navigating away. */ } };
+  // FixBlackScreen.png: the site's sb branch clears #otherVideo.srcObject
+  // and adds .black. Recover only that presentation using existing receivers.
+  // No app.sb override, signaling, capture, track.enabled changes or new peers.
+  let mediaRecovery = null, mediaStatus = 'disabled';
+  function reportMedia(status) {
+    if (status === mediaStatus) return;
+    mediaStatus = status; emit('media-recovery', { status });
+  }
+  function releaseMedia() {
+    const previous = mediaRecovery; mediaRecovery = null;
+    // The page may already have installed the next participant's stream.
+    if (previous && previous.video.srcObject === previous.stream) {
+      previous.video.srcObject = null;
+      previous.video.classList.add('black');
+    }
+    // Never stop shared receiver tracks: the site still owns the connection.
+  }
+  function playRecoveredMedia(recovery) {
+    if (mediaRecovery !== recovery || recovery.playPending) return;
+    recovery.playPending = true;
+    try {
+      Promise.resolve(recovery.video.play()).then(() => {
+        if (mediaRecovery === recovery) reportMedia('restored');
+      }, error => {
+        if (mediaRecovery === recovery) reportMedia(error?.name === 'NotAllowedError' ? 'playback-blocked' : 'playback-error');
+      }).finally(() => { recovery.playPending = false; });
+    } catch {
+      recovery.playPending = false; reportMedia('playback-error');
+    }
+  }
+  function recoverMedia() {
+    try {
+      if (!prefs.restoreBlackScreen) { releaseMedia(); reportMedia('disabled'); return; }
+      const video = document.querySelector('#otherVideo');
+      const candidates = [...connections].filter(e => !['closed','failed','disconnected'].includes(e.pc.connectionState))
+        .map(entry => ({ entry, tracks: entry.pc.getReceivers().map(r => r.track).filter(t => t?.readyState === 'live' && ['audio','video'].includes(t.kind)) }))
+        .filter(candidate => candidate.tracks.some(t => t.kind === 'video'));
+      const candidate = candidates.length === 1 && candidates[0].entry.pc.connectionState === 'connected' ? candidates[0] : null;
+      if (mediaRecovery && (video !== mediaRecovery.video || video.srcObject !== mediaRecovery.stream ||
+          candidate?.entry !== mediaRecovery.entry || candidate.entry.generation !== mediaRecovery.generation)) releaseMedia();
+      if (!video || !candidate) { reportMedia('waiting'); return; }
+      if (mediaRecovery) {
+        // Audio may arrive after video. Keep one stream/player, without echoes
+        // or restarting playback on every observation.
+        const stream = mediaRecovery.stream;
+        for (const track of stream.getTracks()) if (!candidate.tracks.includes(track)) stream.removeTrack(track);
+        for (const track of candidate.tracks) if (!stream.getTracks().includes(track)) stream.addTrack(track);
+        return;
+      }
+      // Missing video alone also happens between chats. Require the exact site
+      // marker and a unique connected peer; never replace a page-owned stream.
+      if (video.srcObject !== null || !video.classList?.contains('black')) { reportMedia('waiting'); return; }
+      const stream = new window.MediaStream(candidate.tracks);
+      mediaRecovery = { video, stream, entry: candidate.entry, generation: candidate.entry.generation, playPending: false };
+      video.srcObject = stream;
+      video.classList.remove('black');
+      reportMedia('attached');
+      playRecoveredMedia(mediaRecovery);
+    } catch { releaseMedia(); reportMedia('unavailable'); }
+  }
+  function retryRecoveredPlayback(event) {
+    if (event.isTrusted && prefs.restoreBlackScreen && mediaRecovery &&
+        ['playback-blocked','playback-error'].includes(mediaStatus)) {
+      recoverMedia();
+      if (mediaRecovery) playRecoveredMedia(mediaRecovery);
+    }
+  }
   // Beta heuristic, not a confirmed report protocol. The supplied page exposes
   // its own socket as window.socket. Never replace WebSocket, send, onmessage,
   // or message data; only listen while enabled. No probes or host DOM writes.
@@ -118,7 +185,12 @@
     const entry = { pc, id: ++sequence, generation: 0, ufrag: '', candidates: [] };
     connections.add(entry);
     entries.set(pc, entry);
-    pc.addEventListener('connectionstatechange', () => { if (pc.connectionState === 'closed') connections.delete(entry); });
+    pc.addEventListener('connectionstatechange', () => {
+      if (pc.connectionState === 'closed') connections.delete(entry);
+      recoverMedia();
+    });
+    // Run after the site's ontrack handler, which may clear the player again.
+    pc.addEventListener('track', () => { if (prefs.restoreBlackScreen) setTimeout(recoverMedia, 0); });
     return pc;
   }
   function intercept(prototype, name, after) {
@@ -161,7 +233,7 @@
         for (const line of sdp.split(/\r?\n/)) if (line.startsWith('a=candidate:')) addCandidate(entry, line);
       }).catch(() => {});
     });
-    intercept(Native.prototype, 'close', entry => connections.delete(entry));
+    intercept(Native.prototype, 'close', entry => { connections.delete(entry); recoverMedia(); });
     replaceConstructor('RTCPeerConnection', Native, { construct(target, args, newTarget) {
       const pc = Reflect.construct(target, args, newTarget);
       try { observe(pc); } catch { /* Return the real PC even if instrumentation fails. */ }
@@ -241,26 +313,26 @@
     };
     try {
       // The deadline survives peer changes, settings changes and cancellation.
-      await sleep(Math.max(delay(1000, 2000), nextSkipAt - Date.now()));
+      await sleep(Math.max(delay(100, 1500), nextSkipAt - Date.now()));
       if (!same()) return result('cancelled');
       const button = skipControl('Skip');
       let usedEscape = !button;
       if (button) button.click();
       else pressEscape();
-      await sleep(delay(1000, 2000));
+      await sleep(delay(100, 500));
       if (!same()) return result('cancelled');
       let confirm = skipControl('Really?');
       if (button && !confirm && skipControl('Skip')) {
         // The click did not advance the label. Start the two-Escape fallback.
         usedEscape = true;
         pressEscape();
-        await sleep(delay(1000, 2000));
+        await sleep(delay(100, 500));
         if (!same()) return result('cancelled');
         confirm = null;
       }
       skippedSessions.add(request.session);
       if (skippedSessions.size > 200) skippedSessions.delete(skippedSessions.values().next().value);
-      nextSkipAt = Date.now() + delay(4000, 6000);
+      nextSkipAt = Date.now() + delay(2000, 3500);
       if (!usedEscape && confirm) confirm.click();
       else { usedEscape = true; pressEscape(); }
       result(usedEscape ? 'keyboard' : 'clicked');
@@ -274,6 +346,8 @@
       if (next.ipSkip !== prefs.ipSkip || next.countrySkip !== prefs.countrySkip) skipToken++;
       prefs = next;
       observeReportSocket();
+      recoverMedia();
+      emit('media-recovery', { status: mediaStatus });
     }
     if (message.kind === 'cancel') skipToken++;
     if (message.kind === 'skip' && (prefs.ipSkip || prefs.countrySkip) && typeof message.data?.session === 'string' && (C.ip(message.data?.ip) || typeof message.data?.countryName === 'string' && message.data.countryName.trim())) void skip(message.data);
@@ -289,6 +363,8 @@
   // The one-time handoff is observable and is NOT authentication against the
   // page. Only subsequent traffic travels over the port. Never send secrets.
   window.addEventListener('message', establish);
+  document.addEventListener('click', retryRecoveredPlayback, true);
+  document.addEventListener('keydown', retryRecoveredPlayback, true);
   document.addEventListener('keydown', e => { if (e.isTrusted && e.key === 'Escape') { skipToken++; emit('manual', null); } }, true);
   document.addEventListener('pointerdown', e => {
     if (e.isTrusted && e.target?.closest?.('button, .mainText, #skipButton, .skipButton')) { skipToken++; emit('manual', null); }
@@ -296,6 +372,7 @@
   document.addEventListener('visibilitychange', () => { if (document.hidden) skipToken++; });
   setInterval(async () => {
     observeReportSocket();
+    recoverMedia();
     if (busy) return;
     busy = true;
     try {
