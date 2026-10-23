@@ -9,8 +9,6 @@ A Manifest V3 extension for Chromium/Edge 116+ on `https://umingle.com` and `htt
 3. The native browser sidebar opens on your first click or keypress in Umingle. Chrome requires a user gesture, so it cannot open immediately on page load. The extension toolbar icon also opens it. If you close it, it stays closed for the rest of that page visit.
 4. Use Settings for preferences, blocked IPs and saved notes.
 
-No build step, API key or account is required. Existing notes and block lists keep their storage keys. Legacy face/report and older hide/crop settings are ignored; the new face-presence preference starts disabled.
-
 ## Face Detection
 
 Open Settings, enable **Face Detection → Report face present**, and click **Save settings**. Disable it and save to restore normal detection. Changes apply to the next detector result in open Umingle tabs. After updating the extension, reload existing Umingle tabs once to install the new hook.
@@ -18,16 +16,6 @@ Open Settings, enable **Face Detection → Report face present**, and click **Sa
 The supplied `sourcecode.txt` uses `/static/vision.js` to process `detectFaces` requests with a `job_id`. The page accepts an `f_res` response when its `k` value equals `Math.imul(job_id * 10 + 1, 837921547) >>> 0`; it then sets `lastFace`, allows matching, and includes `faceShowing` in its own `findPeer` signaling when the value changes. The older `faceDetections` response is treated as a failed check by this source.
 
 When enabled, Chromegle replaces only these two response types from the same-origin `/static/vision.js` worker with the accepted result for the current job. It keeps the actual worker and its camera-frame transfers, and leaves loading, errors, unrelated workers, and WebSocket messages unchanged. No camera image is replaced, so your partner still sees your actual feed. The separate blank-screen check, age verification and server checks remain active. A covered or blank camera may still be rejected. The hook depends on the supplied site's worker protocol; live Umingle acceptance has not been verified.
-
-## Detect Reports (Beta)
-
-After updating the extension, reload it in `chrome://extensions` or `edge://extensions`, then reload Umingle. Open Settings, enable **Detect Reports (Beta)**, and click **Save settings**. It starts disabled. Saving toggles observation in open tabs; disabling removes the listener and clears any alert.
-
-This is an **unverified heuristic**, not confirmation that someone reported you. It looks for both `rimage` (camera-frame request) and `ss` (page-screenshot request) on the site's existing socket within five seconds, in either order. A match displays red **Possible report detected (Beta)** text in the extension sidebar for 30 seconds. Alerts are limited to one per minute. Routine moderation may cause false positives, and reports without this pair will be missed. Alerts are not attributed to the currently displayed participant or IP and are not saved as history.
-
-The detector adds a read-only message listener to the existing same-origin `/ws` socket exposed by the supplied page as `window.socket`. It does not replace the WebSocket constructor, socket methods, or the site's message handler; modify messages; send requests; capture images; click controls; or add UI to Umingle. It uses no new permissions. While enabled, the sidebar shows whether it has attached to the site connection. If the site stops exposing that socket, the detector stays waiting. Messages arriving before attachment are not inspected.
-
-**Report Received** acknowledges your own report and never triggers an alert; it also clears any incomplete pair. Individual capture requests, bans, skips and disconnects do not trigger alerts. Socket changes and disabling clear incomplete pairs. Enabling this feature does not enable auto-skip or the separate face-presence override. Passive observation does not establish compatibility with Umingle's extension policy or guarantee freedom from enforcement. Live report detection has not been verified. See [the investigation](REPORT-DETECTION.md) for evidence and limitations.
 
 ## Connection display
 
