@@ -2,6 +2,8 @@
 
 A Manifest V3 extension for Chromium/Edge 116+ on `https://umingle.com` and `https://www.umingle.com`.
 
+<img width="771" height="1031" alt="image" src="https://github.com/user-attachments/assets/f4e3db80-d772-4edb-a10c-f47132dab2da" />
+
 ## Install / update
 
 1. Open `edge://extensions` or `chrome://extensions`, enable Developer mode, and load this folder unpacked (or reload the existing extension).
